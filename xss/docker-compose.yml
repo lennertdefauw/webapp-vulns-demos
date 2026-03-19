@@ -1,0 +1,21 @@
+services:
+
+  webapp-vulns-xss-backend:
+    build: ./backend
+    container_name: webapp-vulns-xss-backend
+    networks:
+      - webapp-vulns-xss-network
+
+  webapp-vulns-xss-frontend:
+    build: ./frontend
+    container_name: webapp-vulns-xss-frontend
+    ports:
+      - "38086:80"
+    networks:
+      - webapp-vulns-xss-network
+    depends_on:
+      - webapp-vulns-xss-backend
+
+networks:
+  webapp-vulns-xss-network:
+    name: webapp-vulns-xss-network

@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>XSS Demo — Stored vs Reflected</title>
+  <style>
+    :root {
+      --bg: #0d1117; --bg-2: #161b22; --bg-3: #21262d;
+      --border: #30363d; --text: #e6edf3; --text-2: #8b949e;
+      --blue: #58a6ff; --green: #3fb950; --red: #f85149;
+      --orange: #f0883e; --purple: #bc8cff; --yellow: #e3b341;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; display: flex; flex-direction: column; }
+
+    /* ── Header ── */
+    .header { background: var(--bg-2); border-bottom: 1px solid var(--border); padding: 12px 24px; display: flex; align-items: center; gap: 14px; }
+    .logo { font-size: 16px; font-weight: 700; color: var(--blue); }
+    .tag { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 10px; letter-spacing: .05em; text-transform: uppercase; }
+    .tag.stored   { background: rgba(248,81,73,.2);  color: var(--red); }
+    .tag.reflected { background: rgba(240,136,62,.2); color: var(--orange); }
+
+    /* ── Tab bar ── */
+    .tab-bar { display: flex; border-bottom: 1px solid var(--border); background: var(--bg-2); padding: 0 24px; gap: 2px; }
+    .tab {
+      padding: 11px 20px; font-size: 13px; font-weight: 600;
+      color: var(--text-2); cursor: pointer; border-bottom: 2px solid transparent;
+      transition: color .15s, border-color .15s; user-select: none;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .tab:hover { color: var(--text); }
+    .tab.active-stored    { color: var(--red);    border-bottom-color: var(--red); }
+    .tab.active-reflected { color: var(--orange); border-bottom-color: var(--orange); }
+
+    /* ── Panels ── */
+    .tab-content { display: none; flex: 1; }
+    .tab-content.show { display: flex; flex-direction: column; flex: 1; }
+    .layout { display: grid; grid-template-columns: 400px 1fr; flex: 1; }
+    .panel { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+    .panel-right { border-left: 1px solid var(--border); }
+
+    /* ── Section labels ── */
+    .section-label { font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--text-2); margin-bottom: 8px; }
+
+    /* ── Explainer box ── */
+    .explainer {
+      background: var(--bg-3); border: 1px solid var(--border);
+      border-radius: 6px; padding: 13px 14px;
+      font-size: 12px; line-height: 1.7; color: var(--text-2);
+    }
+    .explainer strong { color: var(--text); }
+    .explainer code { font-family: 'Courier New', monospace; color: var(--blue); }
+    .explainer.stored-exp   { border-color: rgba(248,81,73,.3); }
+    .explainer.reflected-exp { border-color: rgba(240,136,62,.3); }
+
+    /* ── Form ── */
+    .field { display: flex; flex-direction: column; gap: 5px; }
+    .field label { font-size: 12px; font-weight: 600; color: var(--text-2); }
+    .field input, .field textarea {
+      background: var(--bg-3); border: 1px solid var(--border);
+      border-radius: 6px; padding: 8px 11px; color: var(--text);
+      font-size: 13px; font-family: inherit; outline: none; resize: vertical;
+    }
+    .field input:focus, .field textarea:focus { border-color: var(--blue); }
+    .field textarea { min-height: 72px; }
+    .btn-row { display: flex; gap: 8px; }
+    .btn-primary {
+      flex: 1; background: var(--red); border: none; color: #fff;
+      font-size: 13px; font-weight: 700; padding: 9px; border-radius: 6px;
+      cursor: pointer; transition: opacity .15s;
+    }
+    .btn-primary.orange { background: var(--orange); }
+    .btn-primary:hover { opacity: .85; }
+    .btn-ghost {
+      background: none; border: 1px solid var(--border); color: var(--text-2);
+      font-size: 12px; font-weight: 600; padding: 9px 16px; border-radius: 6px;
+      cursor: pointer; transition: border-color .15s, color .15s;
+    }
+    .btn-ghost:hover { border-color: var(--text-2); color: var(--text); }
+
+    /* ── Payload chips ── */
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .chip {
+      background: var(--bg-3); border: 1px solid var(--border);
+      border-radius: 4px; padding: 4px 10px;
+      font-size: 11px; font-family: 'Courier New', monospace;
+      color: var(--text-2); cursor: pointer;
+      transition: border-color .15s, color .15s; white-space: nowrap;
+    }
+    .chip.s:hover { border-color: var(--red);    color: var(--red); }
+    .chip.r:hover { border-color: var(--orange); color: var(--orange); }
+
+    /* ── Stored: comment board ── */
+    .comment-board { display: flex; flex-direction: column; gap: 10px; }
+    .comment-item {
+      background: var(--bg-3); border: 1px solid var(--border);
+      border-radius: 6px; padding: 12px 14px;
+    }
+    .comment-item.xss-comment { border-color: rgba(248,81,73,.45); background: rgba(248,81,73,.04); }
+    .comment-meta { font-size: 11px; color: var(--text-2); margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+    .comment-meta .cname { color: var(--blue); font-weight: 600; }
+    .comment-body { font-size: 13px; line-height: 1.6; }
+    .empty-state { color: var(--text-2); font-size: 13px; text-align: center; padding: 40px 0; }
+
+    /* ── Reflected: URL bar ── */
+    .url-bar-wrap {
+      background: var(--bg-3); border: 1px solid var(--border);
+      border-radius: 6px; padding: 8px 12px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .url-bar-prefix { font-size: 12px; font-family: 'Courier New', monospace; color: var(--text-2); white-space: nowrap; }
+    .url-bar-q { font-size: 12px; font-family: 'Courier New', monospace; color: var(--orange); word-break: break-all; }
+
+    /* ── Reflected: search box ── */
+    .search-row { display: flex; gap: 8px; }
+    .search-input {
+      flex: 1; background: var(--bg-3); border: 1px solid var(--border);
+      border-radius: 6px; padding: 8px 11px; color: var(--text);
+      font-size: 13px; font-family: 'Courier New', monospace; outline: none;
+    }
+    .search-input:focus { border-color: var(--orange); }
+
+    /* ── Reflected: results ── */
+    .search-results { display: flex; flex-direction: column; gap: 12px; }
+    .results-header {
+      font-size: 14px; padding-bottom: 10px;
+      border-bottom: 1px solid var(--border); line-height: 1.5;
+    }
+    .results-header .query-echo { font-family: 'Courier New', monospace; }
+    .result-item {
+      background: var(--bg-3); border: 1px solid var(--border);
+      border-radius: 6px; padding: 12px 14px;
+    }
+    .result-title { font-size: 13px; font-weight: 600; color: var(--blue); margin-bottom: 4px; }
+    .result-snippet { font-size: 12px; color: var(--text-2); line-height: 1.6; }
+    .result-snippet .query-echo { font-family: 'Courier New', monospace; }
+
+    /* ── XSS sink note ── */
+    .sink-note {
+      font-size: 11px; font-family: 'Courier New', monospace;
+      color: var(--text-2); background: var(--bg-3);
+      border: 1px dashed var(--border); border-radius: 4px;
+      padding: 6px 10px; margin-top: 6px;
+    }
+    .sink-note .sink { color: var(--red); }
+    .sink-note .sink-orange { color: var(--orange); }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">💬 XSS Demo</div>
+  <span class="tag stored">Stored XSS</span>
+  <span class="tag reflected">Reflected XSS</span>
+</div>
+
+<!-- ══ TAB BAR ══ -->
+<div class="tab-bar">
+  <div class="tab active-stored" id="tab-stored" onclick="switchTab('stored')">
+    🗃️ Stored XSS
+  </div>
+  <div class="tab" id="tab-reflected" onclick="switchTab('reflected')">
+    🔗 Reflected XSS
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     TAB 1 — STORED XSS
+     ════════════════════════════════════════════════════════ -->
+<div class="tab-content show" id="content-stored">
+  <div class="layout">
+
+    <!-- Left -->
+    <div class="panel">
+      <div class="explainer stored-exp">
+        <strong>Stored XSS</strong> — the payload is <strong>saved to the database</strong>.
+        Every visitor who loads this page executes it. No interaction from the attacker
+        is needed after the initial injection.<br><br>
+        The vulnerable sink is <code>element.innerHTML = comment.message</code> — raw
+        user input written directly into the DOM.
+      </div>
+
+      <div>
+        <div class="section-label">Post a Comment</div>
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <div class="field">
+            <label>Name</label>
+            <input id="s-name" type="text" placeholder="Your name" value="alice">
+          </div>
+          <div class="field">
+            <label>Message</label>
+            <textarea id="s-msg" placeholder="Type a message or paste an XSS payload…"></textarea>
+          </div>
+          <div class="btn-row">
+            <button class="btn-primary" onclick="postComment()">Post Comment</button>
+            <button class="btn-ghost" onclick="resetDemo()">↺ Reset</button>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-label">Payload Chips</div>
+        <div class="chips">
+          <div class="chip s" onclick="setStored('&lt;img src=x onerror=&quot;alert(&#39;Stored XSS!&#39;)&quot;&gt;')">&lt;img onerror&gt;</div>
+          <div class="chip s" onclick="setStored('&lt;svg onload=&quot;alert(document.cookie)&quot;&gt;')">&lt;svg onload&gt;</div>
+          <div class="chip s" onclick="setStored('&lt;b onmouseover=&quot;alert(&#39;hover XSS&#39;)&quot;&gt;Hover me&lt;/b&gt;')">&lt;b onmouseover&gt;</div>
+          <div class="chip s" onclick="setStored('&lt;a href=&quot;javascript:alert(&#39;JS link&#39;)&quot;&gt;Click me&lt;/a&gt;')">&lt;a javascript:&gt;</div>
+          <div class="chip s" onclick="setStored('&lt;iframe src=&quot;javascript:alert(&#39;iframe XSS&#39;)&quot;&gt;&lt;/iframe&gt;')">&lt;iframe&gt;</div>
+          <div class="chip s" onclick="setStored('&lt;script&gt;alert(&#39;will not run via innerHTML&#39;)&lt;/script&gt;')">&lt;script&gt; (blocked)</div>
+        </div>
+        <div class="sink-note" style="margin-top:10px;">
+          ⚠️ <span class="sink">&lt;script&gt;</span> tags injected via <span class="sink">innerHTML</span> are blocked by the HTML5 spec —
+          use event-handler attributes (<span class="sink">onerror</span>, <span class="sink">onload</span>) instead.
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: comment board -->
+    <div class="panel panel-right">
+      <div style="display:flex; align-items:center; justify-content:space-between;">
+        <div class="section-label" style="margin-bottom:0">Comment Board</div>
+        <div id="s-count" style="font-size:11px; color:var(--text-2); font-family:'Courier New',monospace;"></div>
+      </div>
+      <div class="sink-note">
+        vulnerable sink: <span class="sink">commentEl.innerHTML = comment.message</span>
+      </div>
+      <div id="comment-board" class="comment-board">
+        <div class="empty-state">No comments yet — post one above</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     TAB 2 — REFLECTED XSS
+     ════════════════════════════════════════════════════════ -->
+<div class="tab-content" id="content-reflected">
+  <div class="layout">
+
+    <!-- Left -->
+    <div class="panel">
+      <div class="explainer reflected-exp">
+        <strong>Reflected XSS</strong> — the payload lives in the <strong>URL</strong> and is
+        echoed back in the response. It is <em>not</em> stored. The attacker crafts a
+        malicious link and tricks the victim into clicking it.<br><br>
+        Here the frontend reads <code>?q=</code> from the URL and writes it into the DOM
+        via <code>innerHTML</code> — just like an SSR app that echoes a search query.
+      </div>
+
+      <div>
+        <div class="section-label">Browser URL</div>
+        <div class="url-bar-wrap">
+          <span class="url-bar-prefix">http://localhost:38086/?q=</span>
+          <span class="url-bar-q" id="r-url-q">&nbsp;</span>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-label">Search</div>
+        <div class="search-row">
+          <input id="r-input" class="search-input" type="text"
+                 placeholder="Search query or XSS payload…"
+                 onkeydown="if(event.key==='Enter') doSearch()">
+          <button class="btn-primary orange" onclick="doSearch()">Search</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-label">Payload Chips</div>
+        <div class="chips">
+          <div class="chip r" onclick="setReflected('&lt;img src=x onerror=&quot;alert(&#39;Reflected XSS!&#39;)&quot;&gt;')">&lt;img onerror&gt;</div>
+          <div class="chip r" onclick="setReflected('&lt;svg onload=&quot;alert(location.href)&quot;&gt;')">&lt;svg onload&gt;</div>
+          <div class="chip r" onclick="setReflected('&lt;b onmouseover=&quot;alert(&#39;hover&#39;)&quot;&gt;Results&lt;/b&gt;')">&lt;b onmouseover&gt;</div>
+          <div class="chip r" onclick="setReflected('&lt;script&gt;alert(1)&lt;/script&gt;')">&lt;script&gt; (blocked)</div>
+        </div>
+        <div class="sink-note" style="margin-top:10px;">
+          Shareable attack URL: <span class="sink-orange" id="r-attack-url" style="word-break:break-all;">paste a payload above</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: search results -->
+    <div class="panel panel-right">
+      <div class="section-label">Search Results</div>
+      <div class="sink-note">
+        vulnerable sink: <span class="sink-orange">resultsHeaderEl.innerHTML = "Results for: " + query</span>
+      </div>
+      <div id="results-area">
+        <div class="empty-state">Enter a search query to see results</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // ── Tab switching ──────────────────────────────────────────────────────────
+  function switchTab(tab) {
+    document.getElementById('content-stored').classList.toggle('show', tab === 'stored');
+    document.getElementById('content-reflected').classList.toggle('show', tab === 'reflected');
+    document.getElementById('tab-stored').className    = 'tab' + (tab === 'stored'    ? ' active-stored'    : '');
+    document.getElementById('tab-reflected').className = 'tab' + (tab === 'reflected' ? ' active-reflected' : '');
+    history.replaceState({}, '', tab === 'reflected' ? '/?tab=reflected' : '/');
+  }
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  (function init() {
+    const p = new URLSearchParams(location.search);
+    if (p.get('tab') === 'reflected') switchTab('reflected');
+    loadComments();
+    // Auto-search if ?q= is present
+    const q = p.get('q');
+    if (q) {
+      switchTab('reflected');
+      document.getElementById('r-input').value = decodeURIComponent(q);
+      doSearch(decodeURIComponent(q));
+    }
+  })();
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // STORED XSS
+  // ════════════════════════════════════════════════════════════════════════════
+
+  function setStored(html) {
+    // chips pass HTML-encoded strings — decode to raw for the textarea
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    document.getElementById('s-msg').value = tmp.textContent || tmp.innerText;
+  }
+
+  async function postComment() {
+    const name    = document.getElementById('s-name').value.trim() || 'Anonymous';
+    const message = document.getElementById('s-msg').value;
+    if (!message.trim()) return;
+
+    await fetch('/api/comments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, message }),
+    });
+
+    document.getElementById('s-msg').value = '';
+    loadComments();
+  }
+
+  async function loadComments() {
+    const r = await fetch('/api/comments');
+    const comments = await r.json();
+
+    const board = document.getElementById('comment-board');
+    const count = document.getElementById('s-count');
+
+    if (!comments.length) {
+      board.innerHTML = '<div class="empty-state">No comments yet — post one above</div>';
+      count.textContent = '';
+      return;
+    }
+
+    count.textContent = comments.length + ' comment' + (comments.length > 1 ? 's' : '');
+
+    board.innerHTML = comments.map(c => {
+      // ⚠ VULNERABLE SINK: message is written with innerHTML — no sanitization
+      const isXSS = /<[^>]+>/i.test(c.message);
+      return `<div class="comment-item ${isXSS ? 'xss-comment' : ''}">
+        <div class="comment-meta">
+          <span class="cname">${escHtml(c.name)}</span>
+          ${isXSS ? '<span class="tag stored" style="font-size:9px;">XSS payload</span>' : ''}
+        </div>
+        <div class="comment-body" id="cb-${c.id}"></div>
+      </div>`;
+    }).join('');
+
+    // Vulnerable: set innerHTML AFTER the container is in the DOM
+    comments.forEach(c => {
+      const el = document.getElementById('cb-' + c.id);
+      if (el) el.innerHTML = c.message;  // ← VULNERABLE SINK
+    });
+  }
+
+  async function resetDemo() {
+    await fetch('/api/reset', { method: 'POST' });
+    loadComments();
+  }
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // REFLECTED XSS
+  // ════════════════════════════════════════════════════════════════════════════
+
+  function setReflected(html) {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    const raw = tmp.textContent || tmp.innerText;
+    document.getElementById('r-input').value = raw;
+    doSearch(raw);
+  }
+
+  async function doSearch(overrideQ) {
+    const q = overrideQ !== undefined
+      ? overrideQ
+      : document.getElementById('r-input').value;
+
+    // Sync URL bar
+    const encoded = encodeURIComponent(q);
+    document.getElementById('r-url-q').textContent = q || '';
+    document.getElementById('r-attack-url').textContent =
+      q ? `http://localhost:38086/?q=${encoded}` : 'paste a payload above';
+    history.replaceState({}, '', q ? `/?tab=reflected&q=${encoded}` : '/?tab=reflected');
+
+    if (!q.trim()) {
+      document.getElementById('results-area').innerHTML = '<div class="empty-state">Enter a search query to see results</div>';
+      return;
+    }
+
+    const r = await fetch('/api/search?' + new URLSearchParams({ q }));
+    const d = await r.json();
+
+    const area = document.getElementById('results-area');
+
+    // Build container then inject via innerHTML — VULNERABLE SINK
+    area.innerHTML = `
+      <div class="search-results">
+        <div class="results-header" id="rh"></div>
+        ${d.results.map((res, i) => `
+          <div class="result-item">
+            <div class="result-title">${escHtml(res.title)}</div>
+            <div class="result-snippet" id="rs-${i}"></div>
+          </div>`).join('')}
+      </div>`;
+
+    // ⚠ VULNERABLE SINK: query echoed back with innerHTML
+    document.getElementById('rh').innerHTML = 'Results for: <span class="query-echo">' + d.query + '</span>';
+    d.results.forEach((res, i) => {
+      const el = document.getElementById('rs-' + i);
+      if (el) el.innerHTML = res.snippet; // also contains the unsanitized query
+    });
+  }
+
+  // ── Utils ─────────────────────────────────────────────────────────────────
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+            .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+</script>
+</body>
+</html>
