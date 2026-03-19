@@ -26,12 +26,12 @@ def env():
         'DB_PORT':       '5432',
         'DB_NAME':       'prod_database',
         'DB_USER':       'prod_user',
-        'DB_PASSWORD':   'Pr0d#S3cr3t!2024',
-        'REDIS_URL':     'redis://:r3dis-p4ss@redis.internal.corp:6379/0',
-        'JWT_SECRET':    'hs256-do-not-expose-xK9mP2qRt7vL4wZ',
-        'ENCRYPTION_KEY':'aes256-key-8f3a1b9c2d4e5f6a7b8c9d0e1f2a3b4c',
+        'DB_PASSWORD':   'DEMO_DB_PASS',
+        'REDIS_URL':     'redis://:DEMO_REDIS_PASS@redis.internal.corp:6379/0',
+        'JWT_SECRET':    'DEMO_JWT_SECRET',
+        'ENCRYPTION_KEY':'DEMO_ENCRYPTION_KEY',
         'SMTP_HOST':     'smtp.internal.corp',
-        'SMTP_PASS':     'smtp-p4ss-2024!',
+        'SMTP_PASS':     'DEMO_SMTP_PASS',
         'AWS_REGION':    'us-east-1',
     })
 
@@ -40,9 +40,9 @@ def env():
 def credentials():
     return jsonify({
         'provider':        'AWS',
-        'AccessKeyId':     'AKIAIOSFODNN7EXAMPLE',
-        'SecretAccessKey': 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY',
-        'SessionToken':    'AQoDYXdzEJr//////////wEa3+YVK1fsb1ZfbX3OXe...<truncated>',
+        'a':     'brol',
+        'b': 'brol',
+        'c':    'DEMO_SESSION_TOKEN',
         'Expiration':      '2026-12-31T23:59:59Z',
         'RoleArn':         'arn:aws:iam::123456789012:role/prod-ec2-ssm-role',
     })
@@ -53,8 +53,8 @@ def config():
     return jsonify({
         'payment_gateway': {
             'provider':       'stripe',
-            'api_key':        'DEMO_STRIPE_LIVE_KEY',
-            'webhook_secret': 'whsec_XhE3kkS8lp9wFjX2nGxNqt5rBm7vKd',
+            'd':        'brol!',
+            'e': 'brol',
         },
         'internal_services': {
             'auth':      'http://auth.internal.corp:8080',
@@ -73,13 +73,13 @@ def config():
 def users():
     return jsonify([
         {'id': 1, 'username': 'admin',    'email': 'admin@corp.internal',    'role': 'superadmin',
-         'password_hash': '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW'},
+         'password_hash': 'DEMO_HASH_ADMIN'},
         {'id': 2, 'username': 'dbadmin',  'email': 'dbadmin@corp.internal',  'role': 'db-admin',
-         'password_hash': '$2b$12$abc123defghijklmnopqrstuvwxyz0ABCDEF123456789abcdef00'},
+         'password_hash': 'DEMO_HASH_DBADMIN'},
         {'id': 3, 'username': 'devops',   'email': 'devops@corp.internal',   'role': 'ops',
-         'password_hash': '$2b$12$xyz789uvwxy012zabcdef345ghijklmno678pqrstu901vwxyzAB'},
+         'password_hash': 'DEMO_HASH_DEVOPS'},
         {'id': 4, 'username': 'deployer', 'email': 'deploy@corp.internal',   'role': 'ci-deploy',
-         'password_hash': '$2b$12$lmno567pqrstu890vwxyz123abcdef456ghijklm789nopqrstuvw'},
+         'password_hash': 'DEMO_HASH_DEPLOYER'},
     ])
 
 
