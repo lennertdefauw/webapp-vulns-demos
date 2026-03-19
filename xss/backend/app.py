@@ -12,7 +12,13 @@ comments = []
 
 @app.route('/comments', methods=['GET'])
 def get_comments():
-    return jsonify(comments)
+    resp = jsonify(comments)
+    # Set demo cookies as real server-side Set-Cookie headers (not HttpOnly)
+    # so document.cookie is always populated and XSS payloads can steal them.
+    resp.set_cookie('session_id',  'eyJhbGciOiJIUzI1NiJ9.dXNlcjphbGljZQ.sLkFm2X', httponly=False, samesite='Lax')
+    resp.set_cookie('auth_token',  'tok_live_4eC39HqLyjWDarj',                      httponly=False, samesite='Lax')
+    resp.set_cookie('user_pref',   'theme=dark&lang=en',                             httponly=False, samesite='Lax')
+    return resp
 
 
 @app.route('/comments', methods=['POST'])
@@ -32,6 +38,16 @@ def post_comment():
     }
     comments.append(comment)
     return jsonify({'success': True, 'comment': comment}), 201
+
+
+@app.route('/comments/<int:comment_id>', methods=['DELETE'])
+def delete_comment(comment_id):
+    global comments
+    original = len(comments)
+    comments = [c for c in comments if c['id'] != comment_id]
+    if len(comments) == original:
+        return jsonify({'error': 'not found'}), 404
+    return jsonify({'success': True})
 
 
 # ── Reflected XSS ─────────────────────────────────────────────────────────────
