@@ -1,0 +1,30 @@
+services:
+
+  webapp-vulns-ssrf-backend:
+    build: ./backend
+    container_name: webapp-vulns-ssrf-backend
+    networks:
+      - webapp-vulns-ssrf-network
+
+  # This service has NO ports: mapping — it is unreachable from the host.
+  # Only containers on webapp-vulns-ssrf-network can reach it.
+  # The SSRF vulnerability in the backend lets an attacker pivot to it.
+  webapp-vulns-ssrf-internal:
+    build: ./internal
+    container_name: webapp-vulns-ssrf-internal
+    networks:
+      - webapp-vulns-ssrf-network
+
+  webapp-vulns-ssrf-frontend:
+    build: ./frontend
+    container_name: webapp-vulns-ssrf-frontend
+    ports:
+      - "38085:80"
+    networks:
+      - webapp-vulns-ssrf-network
+    depends_on:
+      - webapp-vulns-ssrf-backend
+
+networks:
+  webapp-vulns-ssrf-network:
+    name: webapp-vulns-ssrf-network

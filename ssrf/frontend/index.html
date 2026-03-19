@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>LinkProbe — URL Analyzer</title>
+  <style>
+    :root {
+      --bg: #0d1117; --bg-2: #161b22; --bg-3: #21262d;
+      --border: #30363d; --text: #e6edf3; --text-2: #8b949e;
+      --blue: #58a6ff; --green: #3fb950; --red: #f85149;
+      --orange: #f0883e; --purple: #bc8cff; --yellow: #e3b341;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; display: flex; flex-direction: column; }
+
+    /* ── Header ── */
+    .header { background: var(--bg-2); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; align-items: center; gap: 12px; }
+    .logo { font-size: 16px; font-weight: 700; color: var(--blue); }
+    .logo-sub { color: var(--text-2); font-size: 12px; }
+    .tag { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 10px; letter-spacing: .05em; text-transform: uppercase; }
+    .tag.vuln { background: rgba(248,81,73,.2); color: var(--red); margin-left: auto; }
+
+    /* ── Layout ── */
+    .layout { display: grid; grid-template-columns: 420px 1fr; gap: 0; flex: 1; min-height: 0; }
+    .panel { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+    .panel-right { border-left: 1px solid var(--border); }
+
+    /* ── Section labels ── */
+    .section-label { font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--text-2); margin-bottom: 8px; }
+
+    /* ── URL input ── */
+    .url-row { display: flex; gap: 8px; }
+    .url-input {
+      flex: 1; background: var(--bg-3); border: 1px solid var(--border);
+      border-radius: 6px; padding: 9px 12px; color: var(--text); font-size: 13px;
+      font-family: 'Courier New', monospace; outline: none;
+    }
+    .url-input:focus { border-color: var(--blue); }
+    .btn-fetch {
+      background: var(--blue); border: none; color: #0d1117;
+      font-size: 13px; font-weight: 700; padding: 9px 20px;
+      border-radius: 6px; cursor: pointer; white-space: nowrap;
+      transition: opacity .15s;
+    }
+    .btn-fetch:hover { opacity: .85; }
+    .btn-fetch:disabled { opacity: .45; cursor: default; }
+
+    /* ── Target chips ── */
+    .chips { display: flex; flex-direction: column; gap: 6px; }
+    .chip-group-label { font-size: 10px; color: var(--text-2); letter-spacing: .08em; text-transform: uppercase; margin-top: 4px; }
+    .chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+    .chip {
+      background: var(--bg-3); border: 1px solid var(--border);
+      border-radius: 4px; padding: 4px 10px;
+      font-size: 11px; font-family: 'Courier New', monospace;
+      color: var(--text-2); cursor: pointer;
+      transition: border-color .15s, color .15s;
+      white-space: nowrap;
+    }
+    .chip:hover { border-color: var(--blue); color: var(--blue); }
+    .chip.internal { border-color: rgba(248,81,73,.35); color: var(--red); }
+    .chip.internal:hover { border-color: var(--red); }
+    .chip.cloud  { border-color: rgba(227,179,65,.3); color: var(--yellow); }
+    .chip.cloud:hover { border-color: var(--yellow); }
+
+    /* ── Network diagram ── */
+    .net-diagram {
+      background: var(--bg-3); border: 1px solid var(--border);
+      border-radius: 6px; padding: 14px;
+      font-size: 11px; font-family: 'Courier New', monospace;
+      color: var(--text-2); line-height: 1.9;
+    }
+    .net-diagram .ok  { color: var(--green); }
+    .net-diagram .bad { color: var(--red); }
+    .net-diagram .dim { color: var(--text-2); }
+    .net-diagram .highlight { color: var(--orange); font-weight: 700; }
+
+    /* ── Response panel ── */
+    .resp-empty { color: var(--text-2); font-size: 13px; text-align: center; padding: 60px 0; }
+    .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .meta-item {
+      background: var(--bg-3); border: 1px solid var(--border);
+      border-radius: 6px; padding: 10px 13px;
+    }
+    .meta-key { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--text-2); margin-bottom: 4px; }
+    .meta-val { font-size: 13px; font-family: 'Courier New', monospace; color: var(--text); word-break: break-all; }
+    .meta-val.ok  { color: var(--green); }
+    .meta-val.err { color: var(--red); }
+    .meta-val.warn { color: var(--orange); }
+
+    .body-label { display: flex; align-items: center; justify-content: space-between; }
+    .body-box {
+      background: var(--bg-3); border: 1px solid var(--border);
+      border-radius: 6px; padding: 13px; overflow: auto;
+      max-height: 420px; font-size: 12px; font-family: 'Courier New', monospace;
+      color: var(--text); white-space: pre-wrap; word-break: break-all;
+      line-height: 1.65;
+    }
+    .body-box.internal-resp { border-color: rgba(248,81,73,.5); background: rgba(248,81,73,.04); }
+
+    .ssrf-banner {
+      display: none; background: rgba(248,81,73,.08);
+      border: 1px solid var(--red); border-radius: 6px;
+      padding: 11px 14px; font-size: 12px; color: var(--red); line-height: 1.6;
+    }
+    .ssrf-banner.show { display: block; }
+    .ssrf-banner strong { font-weight: 700; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">🔍 LinkProbe</div>
+  <div class="logo-sub">Server-side URL Analyzer</div>
+  <span class="tag vuln">SSRF vulnerable</span>
+</div>
+
+<div class="layout">
+
+  <!-- ══ LEFT PANEL ══ -->
+  <div class="panel">
+
+    <div>
+      <div class="section-label">URL to Fetch</div>
+      <div class="url-row">
+        <input id="url-input" class="url-input" type="text"
+               placeholder="https://example.com" autocomplete="off"
+               onkeydown="if(event.key==='Enter') doFetch()">
+        <button class="btn-fetch" id="btn-fetch" onclick="doFetch()">Fetch</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-label">Quick Targets</div>
+      <div class="chips">
+        <div class="chip-group-label">🌐 public</div>
+        <div class="chip-row">
+          <div class="chip" onclick="setUrl('https://example.com')">example.com</div>
+          <div class="chip" onclick="setUrl('https://httpbin.org/get')">httpbin.org/get</div>
+          <div class="chip" onclick="setUrl('https://ifconfig.me/ip')">ifconfig.me/ip</div>
+        </div>
+
+        <div class="chip-group-label">🔴 internal docker network (unreachable from your browser)</div>
+        <div class="chip-row">
+          <div class="chip internal" onclick="setUrl('http://webapp-vulns-ssrf-internal:8080/')">internal /</div>
+          <div class="chip internal" onclick="setUrl('http://webapp-vulns-ssrf-internal:8080/credentials')">internal /credentials</div>
+          <div class="chip internal" onclick="setUrl('http://webapp-vulns-ssrf-internal:8080/env')">internal /env</div>
+          <div class="chip internal" onclick="setUrl('http://webapp-vulns-ssrf-internal:8080/config')">internal /config</div>
+          <div class="chip internal" onclick="setUrl('http://webapp-vulns-ssrf-internal:8080/users')">internal /users</div>
+          <div class="chip internal" onclick="setUrl('http://webapp-vulns-ssrf-backend:5000/health')">loopback /health</div>
+        </div>
+
+        <div class="chip-group-label">☁️ cloud metadata (real-world payloads)</div>
+        <div class="chip-row">
+          <div class="chip cloud" onclick="setUrl('http://169.254.169.254/latest/meta-data/')">AWS EC2 metadata</div>
+          <div class="chip cloud" onclick="setUrl('http://metadata.google.internal/computeMetadata/v1/')">GCP metadata</div>
+          <div class="chip cloud" onclick="setUrl('http://169.254.169.254/metadata/instance?api-version=2021-02-01')">Azure IMDS</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-label">Network Topology</div>
+      <div class="net-diagram">
+        <span class="ok">you (browser)</span>   <span class="dim">→  port 38085  →</span>  <span class="ok">frontend (nginx)</span><br>
+        <span class="dim">                              ↓</span><br>
+        <span class="dim">                   </span><span class="highlight">backend /fetch?url=</span><span class="dim"> ← SSRF sink</span><br>
+        <span class="dim">                              ↓  server-side request</span><br>
+        <span class="bad">                   internal:8080</span>  <span class="dim">(not reachable from your browser)</span><br>
+        <span class="dim">                   169.254.169.254  ← cloud metadata</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══ RIGHT PANEL ══ -->
+  <div class="panel panel-right">
+    <div id="resp-empty" class="resp-empty">
+      Fetch a URL to see the server's response
+    </div>
+
+    <div id="resp-content" style="display:none; display:flex; flex-direction:column; gap:14px;">
+
+      <div id="ssrf-banner" class="ssrf-banner">
+        ⚠️ <strong>Internal resource accessed via SSRF.</strong>
+        The backend fetched a host that is <em>not reachable from your browser</em> —
+        only from inside the Docker network. In a real environment this could be
+        the cloud metadata endpoint or an internal microservice.
+      </div>
+
+      <div>
+        <div class="section-label">Response Metadata</div>
+        <div class="meta-grid">
+          <div class="meta-item"><div class="meta-key">Status</div><div class="meta-val" id="m-status">—</div></div>
+          <div class="meta-item"><div class="meta-key">Time</div><div class="meta-val" id="m-time">—</div></div>
+          <div class="meta-item"><div class="meta-key">Content-Type</div><div class="meta-val" id="m-ct">—</div></div>
+          <div class="meta-item"><div class="meta-key">Server</div><div class="meta-val" id="m-server">—</div></div>
+          <div class="meta-item" style="grid-column:1/-1"><div class="meta-key">Final URL (after redirects)</div><div class="meta-val" id="m-final">—</div></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="body-label">
+          <div class="section-label" style="margin-bottom:0">Response Body</div>
+          <div id="body-size" style="font-size:11px; color:var(--text-2); font-family:'Courier New',monospace;"></div>
+        </div>
+        <div id="body-box" class="body-box" style="margin-top:8px;"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  const INTERNAL_HOSTS = ['webapp-vulns-ssrf-internal', '169.254.169.254', 'metadata.google.internal', 'localhost', '127.0.0.1', '10.', '172.', '192.168.'];
+
+  function setUrl(u) {
+    document.getElementById('url-input').value = u;
+    document.getElementById('url-input').focus();
+  }
+
+  function isInternal(url) {
+    return INTERNAL_HOSTS.some(h => url.includes(h));
+  }
+
+  async function doFetch() {
+    const url = document.getElementById('url-input').value.trim();
+    if (!url) return;
+
+    const btn = document.getElementById('btn-fetch');
+    btn.disabled = true;
+    btn.textContent = '…';
+
+    document.getElementById('resp-empty').style.display   = 'none';
+    document.getElementById('resp-content').style.display = 'flex';
+    document.getElementById('ssrf-banner').classList.remove('show');
+    document.getElementById('body-box').textContent       = 'Fetching…';
+
+    try {
+      const r = await fetch('/api/fetch?' + new URLSearchParams({ url }));
+      const d = await r.json();
+
+      if (d.error) {
+        setMeta({ status_code: 'ERR', response_time_ms: '—', content_type: '—', server: '—', final_url: url });
+        const box = document.getElementById('body-box');
+        box.textContent    = '✗ ' + d.error;
+        box.style.color    = 'var(--red)';
+        box.classList.remove('internal-resp');
+      } else {
+        setMeta(d);
+        const box = document.getElementById('body-box');
+        box.classList.remove('internal-resp');
+        box.style.color = '';
+
+        // Pretty-print JSON
+        let body = d.body;
+        try { body = JSON.stringify(JSON.parse(d.body), null, 2); } catch(e) {}
+        box.textContent = body;
+        document.getElementById('body-size').textContent = body.length + ' chars';
+
+        if (isInternal(url)) {
+          box.classList.add('internal-resp');
+          document.getElementById('ssrf-banner').classList.add('show');
+        }
+      }
+    } catch(e) {
+      document.getElementById('body-box').textContent = 'Request failed: ' + e.message;
+    }
+
+    btn.disabled = false;
+    btn.textContent = 'Fetch';
+  }
+
+  function setMeta(d) {
+    const sc  = document.getElementById('m-status');
+    sc.textContent = d.status_code;
+    sc.className   = 'meta-val ' + (String(d.status_code).startsWith('2') ? 'ok' : d.status_code === 'ERR' ? 'err' : 'warn');
+    document.getElementById('m-time').textContent   = d.response_time_ms + ' ms';
+    document.getElementById('m-ct').textContent     = d.content_type || '—';
+    document.getElementById('m-server').textContent = d.server       || '—';
+    document.getElementById('m-final').textContent  = d.final_url    || '—';
+  }
+</script>
+</body>
+</html>
