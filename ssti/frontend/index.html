@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CorpMailer — Template Preview</title>
+  <style>
+    :root {
+      --bg: #0d1117; --bg-2: #161b22; --bg-3: #21262d;
+      --border: #30363d; --text: #e6edf3; --text-2: #8b949e;
+      --blue: #58a6ff; --green: #3fb950; --red: #f85149;
+      --orange: #f0883e; --purple: #bc8cff; --yellow: #e3b341;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; display: flex; flex-direction: column; }
+
+    /* ── Header ── */
+    .header { background: var(--bg-2); border-bottom: 1px solid var(--border); padding: 12px 24px; display: flex; align-items: center; gap: 12px; }
+    .logo { font-size: 16px; font-weight: 700; color: var(--blue); }
+    .logo-sub { color: var(--text-2); font-size: 12px; }
+    .tag { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 10px; letter-spacing: .05em; text-transform: uppercase; }
+    .tag.vuln { background: rgba(188,140,255,.2); color: var(--purple); margin-left: auto; }
+    .tag.rce  { background: rgba(248,81,73,.2);   color: var(--red); }
+
+    /* ── Layout ── */
+    .layout { display: grid; grid-template-columns: 440px 1fr; flex: 1; }
+    .panel { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+    .panel-right { border-left: 1px solid var(--border); }
+
+    /* ── Section labels ── */
+    .section-label { font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--text-2); margin-bottom: 8px; }
+
+    /* ── Explainer ── */
+    .explainer {
+      background: var(--bg-3); border: 1px solid rgba(188,140,255,.3);
+      border-radius: 6px; padding: 13px 14px;
+      font-size: 12px; line-height: 1.7; color: var(--text-2);
+    }
+    .explainer strong { color: var(--text); }
+    .explainer code { font-family: 'Courier New', monospace; color: var(--purple); }
+
+    /* ── Template editor ── */
+    .template-editor {
+      width: 100%; min-height: 160px; background: var(--bg-3);
+      border: 1px solid var(--border); border-radius: 6px;
+      padding: 11px 13px; color: var(--text);
+      font-size: 13px; font-family: 'Courier New', monospace;
+      line-height: 1.7; outline: none; resize: vertical;
+    }
+    .template-editor:focus { border-color: var(--purple); }
+
+    .btn-row { display: flex; gap: 8px; }
+    .btn-primary {
+      flex: 1; background: var(--purple); border: none; color: #fff;
+      font-size: 13px; font-weight: 700; padding: 9px; border-radius: 6px;
+      cursor: pointer; transition: opacity .15s;
+    }
+    .btn-primary:hover { opacity: .85; }
+    .btn-ghost {
+      background: none; border: 1px solid var(--border); color: var(--text-2);
+      font-size: 12px; font-weight: 600; padding: 9px 16px; border-radius: 6px;
+      cursor: pointer; transition: border-color .15s, color .15s;
+    }
+    .btn-ghost:hover { border-color: var(--text-2); color: var(--text); }
+
+    /* ── Payload chips ── */
+    .chip-group { display: flex; flex-direction: column; gap: 8px; }
+    .chip-group-label { font-size: 10px; color: var(--text-2); letter-spacing: .08em; text-transform: uppercase; }
+    .chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+    .chip {
+      background: var(--bg-3); border: 1px solid var(--border);
+      border-radius: 4px; padding: 4px 10px;
+      font-size: 11px; font-family: 'Courier New', monospace;
+      color: var(--text-2); cursor: pointer;
+      transition: border-color .15s, color .15s; white-space: nowrap;
+    }
+    .chip.probe:hover  { border-color: var(--yellow);  color: var(--yellow); }
+    .chip.info:hover   { border-color: var(--blue);    color: var(--blue); }
+    .chip.danger:hover { border-color: var(--red);     color: var(--red); }
+
+    /* ── Context vars ── */
+    .ctx-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .ctx-item {
+      background: var(--bg-3); border: 1px solid var(--border);
+      border-radius: 5px; padding: 7px 10px;
+      font-size: 11px; font-family: 'Courier New', monospace;
+    }
+    .ctx-key { color: var(--purple); }
+    .ctx-val { color: var(--text-2); }
+
+    /* ── Right panel: output ── */
+    .output-empty { color: var(--text-2); font-size: 13px; text-align: center; padding: 60px 0; }
+
+    .result-header { display: flex; align-items: center; gap: 10px; }
+    .result-tag { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 10px; letter-spacing: .05em; text-transform: uppercase; }
+    .result-tag.ok  { background: rgba(63,185,80,.15);  color: var(--green); }
+    .result-tag.err { background: rgba(248,81,73,.15);  color: var(--red); }
+    .result-tag.ssti { background: rgba(248,81,73,.2);  color: var(--red); }
+
+    /* ── Input echo (what was sent) ── */
+    .input-echo {
+      background: var(--bg-3); border: 1px solid var(--border);
+      border-radius: 6px; padding: 11px 13px;
+    }
+    .echo-label { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-2); margin-bottom: 6px; }
+    .echo-body {
+      font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.7;
+      white-space: pre-wrap; word-break: break-all;
+    }
+    .echo-body .jinja-expr { color: var(--purple); font-weight: 700; }
+    .echo-body .jinja-block { color: var(--blue); font-weight: 700; }
+    .echo-body .plain { color: var(--text-2); }
+
+    /* ── Output box ── */
+    .output-box {
+      background: var(--bg-3); border: 1px solid var(--border);
+      border-radius: 6px; padding: 13px;
+      font-size: 13px; font-family: 'Courier New', monospace;
+      white-space: pre-wrap; word-break: break-all; line-height: 1.7;
+      max-height: 360px; overflow: auto;
+    }
+    .output-box.ssti-output { border-color: rgba(248,81,73,.5); background: rgba(248,81,73,.04); color: var(--orange); }
+    .output-box.err-output  { border-color: rgba(248,81,73,.4); color: var(--red); }
+
+    .ssti-banner {
+      display: none; background: rgba(248,81,73,.08);
+      border: 1px solid var(--red); border-radius: 6px;
+      padding: 11px 14px; font-size: 12px; color: var(--red); line-height: 1.6;
+    }
+    .ssti-banner.show { display: block; }
+
+    /* ── Sink note ── */
+    .sink-note {
+      font-size: 11px; font-family: 'Courier New', monospace;
+      color: var(--text-2); background: var(--bg-3);
+      border: 1px dashed var(--border); border-radius: 4px;
+      padding: 6px 10px;
+    }
+    .sink-note .sink { color: var(--purple); }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">✉️ CorpMailer</div>
+  <div class="logo-sub">Email Template Preview</div>
+  <span class="tag vuln">SSTI vulnerable · Jinja2</span>
+</div>
+
+<div class="layout">
+
+  <!-- ══ LEFT PANEL ══ -->
+  <div class="panel">
+
+    <div>
+      <div class="section-label">Template Input</div>
+      <textarea id="tmpl-input" class="template-editor"
+                placeholder="Enter a Jinja2 template…"
+                onkeydown="if(event.ctrlKey && event.key==='Enter') doRender()">Hello {{ user.name }}, welcome to {{ app_name }}!</textarea>
+      <div class="sink-note" style="margin-top:8px;">
+        vulnerable sink: <span class="sink">jinja_env.from_string(<strong>user_input</strong>).render()</span>
+      </div>
+      <div class="btn-row" style="margin-top:10px;">
+        <button class="btn-primary" onclick="doRender()">▶ Render Template</button>
+        <button class="btn-ghost" onclick="clearAll()">✕ Clear</button>
+      </div>
+    </div>
+
+    <div class="dummy-placeholder" style="display:none">
+    </div>
+
+  </div>
+
+  <!-- ══ RIGHT PANEL ══ -->
+  <div class="panel panel-right">
+    <div id="output-empty" class="output-empty">
+      Render a template to see the output
+    </div>
+
+    <div id="output-content" style="display:none; flex-direction:column; gap:14px;">
+
+      <div id="ssti-banner" class="ssti-banner">
+        ⚠️ <strong>Server-Side Code Executed.</strong>
+        The Jinja2 engine evaluated your expression on the server and returned live data.
+        With the RCE payloads, arbitrary OS commands run inside the container.
+      </div>
+
+      <div>
+        <div class="result-header">
+          <div class="section-label" style="margin-bottom:0">Input Template</div>
+          <span id="result-tag" class="result-tag ok">ok</span>
+        </div>
+        <div class="input-echo" style="margin-top:8px;">
+          <div class="echo-label">Sent to jinja_env.from_string( … )</div>
+          <div id="echo-body" class="echo-body"></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-label">Rendered Output</div>
+        <div id="output-box" class="output-box"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── Detection heuristics ──────────────────────────────────────────────────
+  // These patterns in the output suggest SSTI evaluation happened
+  const SSTI_INDICATORS = [
+    /^\d+$/, // pure number (e.g. 49 from {{7*7}})
+    /7777777/, // {{7*'7'}} → Jinja2 gives 7777777, Twig gives 49
+    /<class /,
+    /\[<class/,
+    /uid=\d+/,    // id command
+    /root:/,      // /etc/passwd
+    /PATH=/,      // env dump
+    /Flask|Jinja|Werkzeug/,
+    /ImmutableMultiDict/,
+    /'os':/,
+    /subprocess/,
+  ];
+
+  function looksLikeSSTI(output, template) {
+    if (/<\{\{/.test(template)) return false;
+    // If the template contained {{ ... }} and the output differs from literal input
+    if (!/\{\{/.test(template)) return false;
+    return SSTI_INDICATORS.some(rx => rx.test(output));
+  }
+
+  // ── Syntax highlight template input ──────────────────────────────────────
+  function highlightTemplate(tmpl) {
+    const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    return esc(tmpl)
+      .replace(/(\{\{.*?\}\})/g, '<span class="jinja-expr">$1</span>')
+      .replace(/(\{%.*?%\})/g,   '<span class="jinja-block">$1</span>');
+  }
+
+  // ── Core render ──────────────────────────────────────────────────────────
+  async function doRender() {
+    const template = document.getElementById('tmpl-input').value;
+    if (!template.trim()) return;
+
+    document.getElementById('output-empty').style.display   = 'none';
+    document.getElementById('output-content').style.display = 'flex';
+    document.getElementById('ssti-banner').classList.remove('show');
+    document.getElementById('output-box').textContent       = 'Rendering…';
+
+    const r = await fetch('/api/render', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ template }),
+    });
+    const d = await r.json();
+
+    // Echo input
+    document.getElementById('echo-body').innerHTML = highlightTemplate(template);
+
+    const box = document.getElementById('output-box');
+    const tag = document.getElementById('result-tag');
+
+    if (!d.success) {
+      box.textContent  = '✗ ' + d.error;
+      box.className    = 'output-box err-output';
+      tag.textContent  = 'error';
+      tag.className    = 'result-tag err';
+    } else {
+      box.textContent = d.output;
+      const isSSTI    = looksLikeSSTI(d.output, template);
+      box.className   = 'output-box' + (isSSTI ? ' ssti-output' : '');
+      tag.textContent = isSSTI ? '⚡ SSTI executed' : 'rendered';
+      tag.className   = 'result-tag ' + (isSSTI ? 'ssti' : 'ok');
+      if (isSSTI) document.getElementById('ssti-banner').classList.add('show');
+    }
+  }
+
+  function setTmpl(t) {
+    document.getElementById('tmpl-input').value = t;
+    doRender();
+  }
+
+  function clearAll() {
+    document.getElementById('tmpl-input').value = '';
+    document.getElementById('output-empty').style.display   = 'block';
+    document.getElementById('output-content').style.display = 'none';
+  }
+</script>
+</body>
+</html>

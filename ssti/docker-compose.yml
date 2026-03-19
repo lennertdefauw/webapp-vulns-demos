@@ -1,0 +1,21 @@
+services:
+
+  webapp-vulns-ssti-backend:
+    build: ./backend
+    container_name: webapp-vulns-ssti-backend
+    networks:
+      - webapp-vulns-ssti-network
+
+  webapp-vulns-ssti-frontend:
+    build: ./frontend
+    container_name: webapp-vulns-ssti-frontend
+    ports:
+      - "38087:80"
+    networks:
+      - webapp-vulns-ssti-network
+    depends_on:
+      - webapp-vulns-ssti-backend
+
+networks:
+  webapp-vulns-ssti-network:
+    name: webapp-vulns-ssti-network
