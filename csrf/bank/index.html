@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SecureBank — Online Banking</title>
+  <style>
+    :root {
+      --bg: #0d1117; --bg-2: #161b22; --bg-3: #21262d;
+      --border: #30363d; --text: #e6edf3; --text-2: #8b949e;
+      --blue: #58a6ff; --green: #3fb950; --red: #f85149;
+      --orange: #f0883e; --purple: #bc8cff; --yellow: #e3b341;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
+
+    /* ── Header ── */
+    .header { background: var(--bg-2); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; }
+    .logo { font-size: 17px; font-weight: 700; color: var(--blue); display: flex; align-items: center; gap: 8px; }
+    .logo-user { color: var(--text-2); font-weight: 400; font-size: 13px; }
+    .btn-sm { background: none; border: 1px solid var(--border); color: var(--text-2); padding: 5px 14px; border-radius: 6px; cursor: pointer; font-size: 12px; transition: border-color .15s, color .15s; }
+    .btn-sm:hover { border-color: var(--red); color: var(--red); }
+    .btn-sm.reset { margin-right: 8px; }
+    .btn-sm.reset:hover { border-color: var(--yellow); color: var(--yellow); }
+
+    /* ── CSRF alert banner ── */
+    .banner { display: none; margin: 16px 24px; padding: 13px 16px; border-radius: 6px; font-size: 13px; line-height: 1.6; }
+    .banner.show { display: block; }
+    .banner.danger { background: rgba(248,81,73,.1); border: 1px solid var(--red); color: var(--red); }
+    .banner.info   { background: rgba(88,166,255,.08); border: 1px solid var(--blue); color: var(--blue); }
+
+    /* ── Login page ── */
+    #login-view { max-width: 380px; margin: 72px auto; padding: 0 20px; }
+    .login-card { background: var(--bg-2); border: 1px solid var(--border); border-radius: 8px; padding: 28px; }
+    .login-title { font-size: 19px; font-weight: 700; margin-bottom: 4px; }
+    .login-sub { color: var(--text-2); font-size: 13px; margin-bottom: 22px; }
+    .hint { background: var(--bg-3); border: 1px solid var(--border); border-radius: 6px; padding: 11px 14px; margin-top: 16px; font-size: 12px; font-family: 'Courier New', monospace; }
+    .hint-label { color: var(--text-2); font-size: 11px; margin-bottom: 5px; }
+    .hint-cred { color: var(--yellow); }
+    .hint-attack { margin-top: 10px; }
+    .hint-attack a { color: var(--red); text-decoration: none; font-family: 'Courier New', monospace; font-size: 12px; }
+    .hint-attack a:hover { text-decoration: underline; }
+    .hint-attack .hint-label { color: var(--red); opacity: .7; }
+
+    /* ── Dashboard ── */
+    .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 20px 24px; max-width: 1060px; margin: 0 auto; }
+
+    /* ── Cards ── */
+    .card { background: var(--bg-2); border: 1px solid var(--border); border-radius: 8px; padding: 20px; }
+    .card-title { font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--text-2); margin-bottom: 14px; }
+
+    /* ── Balance ── */
+    .balance { font-size: 38px; font-weight: 700; color: var(--green); font-family: 'Courier New', monospace; transition: color .3s; }
+    .balance.shock { color: var(--red) !important; animation: shake .4s; }
+    @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
+    .balance-sub { color: var(--text-2); font-size: 12px; margin-top: 5px; }
+
+    /* ── Form ── */
+    .field { margin-top: 14px; }
+    .field:first-child { margin-top: 0; }
+    .field label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2); margin-bottom: 5px; }
+    .field input, .field select { width: 100%; background: var(--bg-3); border: 1px solid var(--border); border-radius: 6px; padding: 8px 11px; color: var(--text); font-size: 13px; outline: none; }
+    .field input:focus, .field select:focus { border-color: var(--blue); }
+    .btn-primary { width: 100%; background: var(--purple); border: none; color: #fff; font-size: 13px; font-weight: 700; padding: 10px; border-radius: 6px; cursor: pointer; margin-top: 16px; transition: opacity .15s; }
+    .btn-primary:hover { opacity: .85; }
+    .form-msg { font-size: 12px; font-family: 'Courier New', monospace; margin-top: 9px; display: none; }
+
+    /* ── Transaction list ── */
+    .tx-list { display: flex; flex-direction: column; gap: 8px; }
+    .tx-item { background: var(--bg-3); border: 1px solid var(--border); border-radius: 6px; padding: 10px 13px; font-size: 12px; font-family: 'Courier New', monospace; }
+    .tx-item.csrf-tx { border-color: rgba(248,81,73,.5); background: rgba(248,81,73,.05); }
+    .tx-row1 { display: flex; align-items: center; gap: 8px; }
+    .tx-amount { font-size: 14px; font-weight: 700; }
+    .tx-amount.out { color: var(--red); }
+    .tx-amount.in  { color: var(--green); }
+    .tx-peer { color: var(--text); }
+    .tx-badge { font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 10px; letter-spacing: .05em; text-transform: uppercase; }
+    .tx-badge.csrf-badge   { background: rgba(248,81,73,.2);  color: var(--red); }
+    .tx-badge.legit-badge  { background: rgba(63,185,80,.15); color: var(--green); }
+    .tx-meta { color: var(--text-2); font-size: 10px; margin-top: 5px; }
+    .tx-meta .bad { color: var(--red); }
+    .tx-meta .ok  { color: var(--green); }
+    .empty-state { color: var(--text-2); font-size: 13px; text-align: center; padding: 24px 0; }
+
+    /* ── Login error ── */
+    .login-err { color: var(--red); font-size: 12px; margin-top: 10px; display: none; }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════ LOGIN VIEW ══════════════ -->
+<div id="login-view">
+  <div style="text-align:center; margin-bottom:22px;">
+    <div style="font-size:26px; font-weight:700; color:var(--blue);">🏦 SecureBank</div>
+    <div style="color:var(--text-2); font-size:13px; margin-top:5px;">Online Banking Portal</div>
+  </div>
+  <div class="login-card">
+    <div class="login-title">Sign in</div>
+    <div class="login-sub">Enter your credentials to access your account</div>
+    <div class="field"><label>Username</label><input id="inp-user" type="text" placeholder="Username" autocomplete="off"></div>
+    <div class="field"><label>Password</label><input id="inp-pass" type="password" placeholder="Password"></div>
+    <button class="btn-primary" onclick="doLogin()">Sign in</button>
+    <div id="login-err" class="login-err"></div>
+  </div>
+  <div class="hint">
+    <div class="hint-label">Demo credentials</div>
+    <div class="hint-cred">alice / alice123 &nbsp;·&nbsp; $10,000</div>
+    <div class="hint-cred">bob &nbsp;&nbsp;/ bob123 &nbsp;&nbsp;&nbsp;·&nbsp; $1,000</div>
+  </div>
+  <div class="hint hint-attack">
+    <div class="hint-label">⚠ Simulate the attack</div>
+    <a href="http://localhost:38084" target="_blank">→ Open attacker page &nbsp;(localhost:38084) &#x2197;</a>
+  </div>
+</div>
+
+<!-- ══════════════ DASHBOARD VIEW ══════════════ -->
+<div id="dash-view" style="display:none">
+  <div class="header">
+    <div class="logo">
+      🏦 SecureBank
+      <span class="logo-user" id="hdr-user"></span>
+    </div>
+    <div>
+      <button class="btn-sm reset" onclick="doReset()">↺ Reset demo</button>
+      <button class="btn-sm" onclick="doLogout()">Sign out</button>
+    </div>
+  </div>
+
+  <div id="csrf-banner" class="banner danger">
+    ⚠️ <strong>CSRF Attack Detected!</strong> &nbsp;A cross-site request transferred funds from your account without your knowledge.
+    The transaction log below shows the forged request — notice the <code>origin</code> and <code>referer</code> headers revealing it came from a different site.
+  </div>
+
+  <div class="dash-grid">
+    <!-- Left col -->
+    <div style="display:flex;flex-direction:column;gap:16px;">
+      <div class="card">
+        <div class="card-title">Account Balance</div>
+        <div class="balance" id="balance-val">$0.00</div>
+        <div class="balance-sub" id="balance-sub"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Transfer Funds</div>
+        <div class="field"><label>Recipient</label>
+          <select id="tx-to"></select>
+        </div>
+        <div class="field"><label>Amount (USD)</label>
+          <input id="tx-amt" type="number" placeholder="0.00" min="1">
+        </div>
+        <button class="btn-primary" onclick="doTransfer()">Transfer</button>
+        <div id="tx-msg" class="form-msg"></div>
+      </div>
+    </div>
+
+    <!-- Right col -->
+    <div class="card">
+      <div class="card-title">Transaction History</div>
+      <div id="tx-list" class="tx-list">
+        <div class="empty-state">No transactions yet</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── Init ──────────────────────────────────────────────────────────────────
+  (async function init() {
+    const params = new URLSearchParams(location.search);
+
+    try {
+      const r = await fetch('/api/account', { credentials: 'include' });
+      if (r.ok) {
+        const d = await r.json();
+        showDash(d);
+        if (params.get('csrf_attack') === '1') {
+          document.getElementById('csrf-banner').classList.add('show');
+          history.replaceState({}, '', '/');
+        }
+      }
+    } catch(e) {}
+  })();
+
+  // ── Auth ──────────────────────────────────────────────────────────────────
+  async function doLogin() {
+    const username = document.getElementById('inp-user').value;
+    const password = document.getElementById('inp-pass').value;
+
+    const r = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+      credentials: 'include'
+    });
+    const d = await r.json();
+    if (d.success) {
+      const acc = await fetch('/api/account', { credentials: 'include' });
+      showDash(await acc.json());
+    } else {
+      const el = document.getElementById('login-err');
+      el.textContent = d.error;
+      el.style.display = 'block';
+    }
+  }
+
+  async function doLogout() {
+    await fetch('/api/logout', { method: 'POST', credentials: 'include' });
+    document.getElementById('dash-view').style.display   = 'none';
+    document.getElementById('login-view').style.display  = 'block';
+    document.getElementById('csrf-banner').classList.remove('show');
+  }
+
+  async function doReset() {
+    await fetch('/api/reset', { method: 'POST', credentials: 'include' });
+    const acc = await fetch('/api/account', { credentials: 'include' });
+    updateDash(await acc.json());
+    document.getElementById('csrf-banner').classList.remove('show');
+  }
+
+  // ── Dashboard ─────────────────────────────────────────────────────────────
+  function showDash(data) {
+    document.getElementById('login-view').style.display = 'none';
+    document.getElementById('dash-view').style.display  = 'block';
+    updateDash(data);
+  }
+
+  function updateDash(data) {
+    document.getElementById('hdr-user').textContent     = '· ' + data.username;
+    document.getElementById('balance-val').textContent  = '$' + data.balance.toFixed(2);
+    document.getElementById('balance-sub').textContent  = 'Account holder: ' + data.username;
+
+    const sel = document.getElementById('tx-to');
+    sel.innerHTML = '';
+    ['alice', 'bob'].filter(u => u !== data.username)
+      .forEach(u => sel.insertAdjacentHTML('beforeend', `<option value="${u}">${u}</option>`));
+
+    renderTxList(data.transactions || [], data.username);
+  }
+
+  function renderTxList(txs, me) {
+    const el = document.getElementById('tx-list');
+    if (!txs.length) { el.innerHTML = '<div class="empty-state">No transactions yet</div>'; return; }
+
+    el.innerHTML = txs.slice().reverse().map(tx => {
+      const isOut   = tx.from === me;
+      const isCSRF  = tx.origin !== 'none' && tx.origin !== 'http://localhost:38083';
+      const sign    = isOut ? '-' : '+';
+      const amtCls  = isOut ? 'out' : 'in';
+      const peer    = isOut ? '→ ' + tx.to : '← ' + tx.from;
+      const badge   = isCSRF
+        ? '<span class="tx-badge csrf-badge">CSRF</span>'
+        : '<span class="tx-badge legit-badge">legit</span>';
+      const origCls = isCSRF ? 'bad' : 'ok';
+
+      return `<div class="tx-item ${isCSRF ? 'csrf-tx' : ''}">
+        <div class="tx-row1">
+          <span class="tx-amount ${amtCls}">${sign}$${tx.amount.toFixed(2)}</span>
+          <span class="tx-peer">${peer}</span>
+          ${badge}
+        </div>
+        <div class="tx-meta">method: ${tx.method} &nbsp;·&nbsp; origin: <span class="${origCls}">${tx.origin}</span></div>
+        <div class="tx-meta">referer: ${tx.referer}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // ── Transfer (legitimate) ─────────────────────────────────────────────────
+  async function doTransfer() {
+    const to     = document.getElementById('tx-to').value;
+    const amount = parseFloat(document.getElementById('tx-amt').value);
+    const msg    = document.getElementById('tx-msg');
+
+    const r = await fetch('/api/transfer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to, amount }),
+      credentials: 'include'
+    });
+    const d = await r.json();
+
+    msg.style.display = 'block';
+    if (d.success) {
+      msg.style.color   = 'var(--green)';
+      msg.textContent   = `✓ Sent $${d.transaction.amount.toFixed(2)} to ${d.transaction.to}`;
+      const acc = await fetch('/api/account', { credentials: 'include' });
+      updateDash(await acc.json());
+    } else {
+      msg.style.color = 'var(--red)';
+      msg.textContent = '✗ ' + d.error;
+    }
+  }
+
+  // ── Enter key shortcut ────────────────────────────────────────────────────
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && document.getElementById('login-view').style.display !== 'none') doLogin();
+  });
+</script>
+</body>
+</html>

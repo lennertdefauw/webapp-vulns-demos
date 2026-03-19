@@ -1,0 +1,29 @@
+services:
+
+  webapp-vulns-csrf-backend:
+    build: ./backend
+    container_name: webapp-vulns-csrf-backend
+    networks:
+      - webapp-vulns-csrf-network
+
+  webapp-vulns-csrf-bank:
+    build: ./bank
+    container_name: webapp-vulns-csrf-bank
+    ports:
+      - "38083:80"
+    networks:
+      - webapp-vulns-csrf-network
+    depends_on:
+      - webapp-vulns-csrf-backend
+
+  webapp-vulns-csrf-attacker:
+    build: ./attacker
+    container_name: webapp-vulns-csrf-attacker
+    ports:
+      - "38084:80"
+    networks:
+      - webapp-vulns-csrf-network
+
+networks:
+  webapp-vulns-csrf-network:
+    name: webapp-vulns-csrf-network
