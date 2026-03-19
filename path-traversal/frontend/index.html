@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CyberCorp — Document Portal</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-0:   #0d1117;
+      --bg-1:   #161b22;
+      --bg-2:   #21262d;
+      --border: #30363d;
+      --text-1: #e6edf3;
+      --text-2: #8b949e;
+      --red:    #f85149;
+      --orange: #e3b341;
+      --green:  #3fb950;
+      --blue:   #58a6ff;
+    }
+
+    body {
+      background: var(--bg-0);
+      color: var(--text-1);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .header {
+      background: var(--bg-1);
+      border-bottom: 1px solid var(--border);
+      padding: 13px 24px;
+      display: flex; align-items: center; gap: 12px;
+      flex-shrink: 0;
+    }
+    .header .logo {
+      width: 30px; height: 30px;
+      background: var(--orange);
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 13px; color: #000;
+    }
+    .header .app-name { font-size: 15px; font-weight: 600; }
+    .header .vuln-badge {
+      margin-left: auto;
+      background: rgba(248,81,73,.12);
+      border: 1px solid rgba(248,81,73,.35);
+      color: var(--red);
+      font-size: 10px; font-weight: 700;
+      padding: 3px 10px; border-radius: 20px;
+      text-transform: uppercase; letter-spacing: .8px;
+    }
+
+    .url-bar {
+      background: var(--bg-1);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 24px;
+      display: flex; align-items: center; gap: 8px;
+      flex-shrink: 0;
+    }
+    .url-bar .origin {
+      font-family: 'Courier New', monospace;
+      font-size: 13px; color: var(--text-2);
+      white-space: nowrap;
+    }
+    .url-bar .param-key {
+      font-family: 'Courier New', monospace;
+      font-size: 13px; color: var(--blue);
+      white-space: nowrap;
+    }
+    .url-bar input {
+      flex: 1;
+      background: var(--bg-2); border: 1px solid var(--border);
+      color: var(--orange); padding: 7px 12px;
+      border-radius: 6px; font-size: 13px;
+      font-family: 'Courier New', monospace;
+      outline: none; transition: border-color .2s;
+    }
+    .url-bar input:focus { border-color: var(--orange); }
+    .btn {
+      background: var(--orange); color: #000;
+      border: none; padding: 8px 18px;
+      border-radius: 6px; font-size: 13px; font-weight: 700;
+      cursor: pointer; transition: opacity .2s;
+      display: flex; align-items: center; gap: 6px; white-space: nowrap;
+    }
+    .btn:hover { opacity: .85; }
+    .btn .spinner {
+      display: none; width: 13px; height: 13px;
+      border: 2px solid rgba(0,0,0,.3); border-top-color: #000;
+      border-radius: 50%; animation: spin .7s linear infinite;
+    }
+    .btn.loading .spinner { display: block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .main {
+      flex: 1; display: flex; flex-direction: column;
+      padding: 28px 32px; gap: 20px; overflow-y: auto;
+    }
+
+    .block-label {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .8px; color: var(--text-2); margin-bottom: 7px;
+    }
+
+    .code-box {
+      background: var(--bg-1);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 13px 16px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px; line-height: 1.65;
+      word-break: break-all; min-height: 44px;
+    }
+    .code-box .path-base { color: var(--blue); }
+    .code-box .path-inj  { color: var(--red); text-decoration: underline dotted; }
+
+    .content-box {
+      background: var(--bg-1);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 16px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px; line-height: 1.75;
+      white-space: pre-wrap; word-break: break-all;
+      flex: 1; overflow-y: auto;
+      color: var(--text-1);
+      min-height: 200px;
+    }
+    .content-box.escaped { border-color: rgba(248,81,73,.5); color: var(--orange); }
+    .content-box.error   { color: var(--text-2); font-style: italic; }
+
+    .placeholder { color: var(--text-2); font-style: italic; }
+
+    .file-list { display: flex; flex-wrap: wrap; gap: 6px; }
+    .file-chip {
+      background: var(--bg-2); border: 1px solid var(--border);
+      border-radius: 5px; padding: 5px 11px;
+      font-family: 'Courier New', monospace; font-size: 12px;
+      color: var(--blue); cursor: pointer;
+      transition: border-color .15s, background .15s;
+    }
+    .file-chip:hover { border-color: var(--blue); background: rgba(88,166,255,.07); }
+
+    .footer {
+      background: var(--bg-1); border-top: 1px solid var(--border);
+      padding: 9px 24px; font-size: 11px; color: var(--text-2);
+      display: flex; justify-content: space-between; flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">CC</div>
+  <span class="app-name">CyberCorp — Document Portal</span>
+  <span class="vuln-badge">⚠ Vulnerable Demo</span>
+</div>
+
+<div class="url-bar">
+  <span class="origin" id="urlOrigin"></span>
+  <span class="param-key">/?file=</span>
+  <input type="text" id="fileInput" placeholder="welcome.txt" autocomplete="off" />
+  <button class="btn" id="readBtn" onclick="readFile()">
+    <div class="spinner"></div>
+    <span id="btnText">→ Fetch</span>
+  </button>
+</div>
+
+<div class="main">
+
+  <div>
+    <div class="block-label">Available Documents</div>
+    <div class="file-list" id="fileList"><span class="placeholder">Loading…</span></div>
+  </div>
+
+  <div>
+    <div class="block-label">Resolved Path on Server</div>
+    <div class="code-box" id="dbPath">
+      <span class="placeholder">— enter a filename above and hit Fetch —</span>
+    </div>
+  </div>
+
+  <div style="flex:1; display:flex; flex-direction:column;">
+    <div class="block-label">File Content</div>
+    <div class="content-box" id="dbContent">
+      <span class="placeholder">—</span>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">
+  <span>CyberCorp Document Portal v1.3.0 — File Service</span>
+  <span>webapp-vulns-demos · path-traversal POC</span>
+</div>
+
+<script>
+  document.getElementById('urlOrigin').textContent = window.location.origin;
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function renderPath(resolved, base, escaped) {
+    if (!escaped) return '<span class="path-base">' + escHtml(resolved) + '</span>';
+    return '<span class="path-base">' + escHtml(base) + '</span><span class="path-inj">' + escHtml(resolved.slice(base.length) || resolved) + '</span>';
+  }
+
+  async function readFile() {
+    const filename = document.getElementById('fileInput').value.trim();
+    if (!filename) return;
+
+    const url = new URL(window.location);
+    url.searchParams.set('file', filename);
+    history.pushState({}, '', url);
+
+    const btn     = document.getElementById('readBtn');
+    const btnText = document.getElementById('btnText');
+    btn.classList.add('loading');
+    btnText.textContent = '…';
+
+    try {
+      const res  = await fetch('/api/read?file=' + encodeURIComponent(filename));
+      const data = await res.json();
+
+      document.getElementById('dbPath').innerHTML =
+        renderPath(data.resolved_path || '', data.base_dir || '', data.escaped_base);
+
+      const box = document.getElementById('dbContent');
+      if (data.success && data.content !== undefined) {
+        box.textContent = data.content;
+        box.className   = 'content-box' + (data.escaped_base ? ' escaped' : '');
+      } else {
+        box.textContent = data.error || 'Unknown error.';
+        box.className   = 'content-box error';
+      }
+
+    } catch (e) {
+      document.getElementById('dbPath').innerHTML =
+        '<span style="color:var(--red)">Connection error — is the backend container running?</span>';
+      document.getElementById('dbContent').textContent = '';
+    } finally {
+      btn.classList.remove('loading');
+      btnText.textContent = '→ Fetch';
+    }
+  }
+
+  document.getElementById('fileInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') readFile();
+  });
+
+  async function loadFileList() {
+    try {
+      var res  = await fetch('/api/ls');
+      var data = await res.json();
+      var list = document.getElementById('fileList');
+      if (data.files && data.files.length) {
+        list.innerHTML = data.files.map(function(f) {
+          return '<span class="file-chip" onclick="useFile(\'' + f + '\')">\uD83D\uDCC4 ' + f + '</span>';
+        }).join('');
+      } else {
+        list.innerHTML = '<span class="placeholder">No files found.</span>';
+      }
+    } catch (e) {
+      document.getElementById('fileList').innerHTML =
+        '<span class="placeholder" style="color:var(--red)">Could not reach backend.</span>';
+    }
+  }
+
+  function useFile(name) {
+    document.getElementById('fileInput').value = name;
+    readFile();
+  }
+
+  var initialFile = new URL(window.location).searchParams.get('file');
+  if (initialFile) {
+    document.getElementById('fileInput').value = initialFile;
+    readFile();
+  }
+
+  loadFileList();
+</script>
+</body>
+</html>

@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CyberCorp &mdash; Automation Portal</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-0:   #0d1117;
+      --bg-1:   #161b22;
+      --bg-2:   #21262d;
+      --border: #30363d;
+      --text-1: #e6edf3;
+      --text-2: #8b949e;
+      --red:    #f85149;
+      --orange: #e3b341;
+      --green:  #3fb950;
+      --blue:   #58a6ff;
+      --purple: #bc8cff;
+    }
+
+    body {
+      background: var(--bg-0);
+      color: var(--text-1);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      display: flex; flex-direction: column;
+    }
+
+    .header {
+      background: var(--bg-1); border-bottom: 1px solid var(--border);
+      padding: 13px 24px; display: flex; align-items: center; gap: 12px; flex-shrink: 0;
+    }
+    .header .logo {
+      width: 30px; height: 30px; background: var(--purple);
+      border-radius: 6px; display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 13px; color: #000;
+    }
+    .header .app-name { font-size: 15px; font-weight: 600; }
+    .header .vuln-badge {
+      margin-left: auto;
+      background: rgba(248,81,73,.12); border: 1px solid rgba(248,81,73,.35);
+      color: var(--red); font-size: 10px; font-weight: 700;
+      padding: 3px 10px; border-radius: 20px;
+      text-transform: uppercase; letter-spacing: .8px;
+    }
+
+    .main {
+      flex: 1; display: grid; grid-template-columns: 380px 1fr; overflow: hidden;
+    }
+
+    /* ── Left panel ── */
+    .left-panel {
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      padding: 28px 28px; gap: 28px; overflow-y: auto;
+    }
+
+    .block-label {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .8px; color: var(--text-2); margin-bottom: 10px;
+    }
+
+    /* Drop zone */
+    .drop-zone {
+      border: 2px dashed var(--border); border-radius: 8px;
+      padding: 28px 16px; text-align: center;
+      cursor: pointer; transition: border-color .2s, background .2s;
+      position: relative;
+    }
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: var(--purple); background: rgba(188,140,255,.05);
+    }
+    .drop-zone input[type="file"] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+    }
+    .drop-zone .dz-icon { font-size: 28px; margin-bottom: 8px; }
+    .drop-zone .dz-hint { font-size: 12px; color: var(--text-2); line-height: 1.5; }
+    .drop-zone .dz-hint strong { color: var(--purple); }
+    .drop-zone .dz-selected {
+      margin-top: 10px; font-size: 12px; font-family: 'Courier New', monospace;
+      color: var(--orange); display: none;
+    }
+
+    .btn-upload {
+      width: 100%;
+      background: var(--purple); color: #000;
+      border: none; padding: 10px;
+      border-radius: 6px; font-size: 13px; font-weight: 700;
+      cursor: pointer; transition: opacity .2s;
+      display: flex; align-items: center; justify-content: center; gap: 7px;
+      margin-top: 10px;
+    }
+    .btn-upload:hover { opacity: .85; }
+    .btn-upload .spinner {
+      display: none; width: 13px; height: 13px;
+      border: 2px solid rgba(0,0,0,.3); border-top-color: #000;
+      border-radius: 50%; animation: spin .7s linear infinite;
+    }
+    .btn-upload.loading .spinner { display: block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .upload-status {
+      font-size: 12px; padding: 7px 11px; border-radius: 5px; display: none;
+      font-family: 'Courier New', monospace;
+    }
+    .upload-status.ok  { display:block; background:rgba(63,185,80,.1);  border:1px solid rgba(63,185,80,.3);  color:var(--green); }
+    .upload-status.err { display:block; background:rgba(248,81,73,.1);  border:1px solid rgba(248,81,73,.3);  color:var(--red);   }
+
+    /* Script list */
+    .script-list { display: flex; flex-direction: column; gap: 5px; }
+    .script-item {
+      display: flex; flex-direction: column; gap: 5px;
+      background: var(--bg-2); border: 1px solid var(--border);
+      border-radius: 6px; padding: 10px 12px;
+      font-family: 'Courier New', monospace; font-size: 12px;
+    }
+    .script-item-top {
+      display: flex; align-items: center; gap: 8px;
+    }
+    .script-item .sname { color: var(--blue); flex: 1; }
+    .btn-run {
+      background: none; border: 1px solid var(--border);
+      color: var(--text-2); font-size: 11px; font-weight: 700;
+      padding: 3px 10px; border-radius: 4px; cursor: pointer;
+      transition: border-color .15s, color .15s, background .15s;
+      white-space: nowrap;
+    }
+    .btn-run:hover { border-color: var(--purple); color: var(--purple); background: rgba(188,140,255,.07); }
+
+    .upload-path-note {
+      margin-top: 8px; font-size: 11px; font-family: 'Courier New', monospace;
+      color: var(--text-2);
+    }
+    .upload-path-note .hl { color: var(--purple); }
+
+    .web-path {
+      font-size: 11px; font-family: 'Courier New', monospace;
+      color: var(--text-2); padding-left: 22px;
+    }
+    .web-path a { color: var(--purple); text-decoration: none; }
+    .web-path a:hover { text-decoration: underline; }
+
+    .placeholder { color: var(--text-2); font-style: italic; font-size: 13px; }
+
+    /* ── Right: output panel ── */
+    .right-panel {
+      background: var(--bg-1); padding: 28px 32px;
+      overflow-y: auto; display: flex; flex-direction: column; gap: 18px;
+    }
+
+    .debug-header {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 1px; color: var(--text-2);
+    }
+    .debug-header .dot {
+      width: 8px; height: 8px; border-radius: 50%; background: var(--purple);
+      animation: pulse 1.8s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.25} }
+
+    .meta-box {
+      background: var(--bg-0); border: 1px solid var(--border);
+      border-radius: 6px; padding: 13px 15px;
+      font-size: 12px; min-height: 44px;
+    }
+    .kv { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid var(--border); }
+    .kv:last-child { border-bottom: none; }
+    .kv-key   { font-family: 'Courier New', monospace; color: var(--blue); }
+    .kv-value { font-family: 'Courier New', monospace; color: var(--text-1); max-width: 65%; text-align: right; word-break: break-all; }
+
+    .output-box {
+      background: var(--bg-0); border: 1px solid var(--border);
+      border-radius: 6px; padding: 15px;
+      font-family: 'Courier New', monospace; font-size: 13px;
+      line-height: 1.75; white-space: pre-wrap; word-break: break-all;
+      flex: 1; min-height: 160px; color: var(--green);
+    }
+    .output-box.has-stderr { border-color: rgba(248,81,73,.4); }
+    .stderr-box {
+      background: var(--bg-0); border: 1px solid rgba(248,81,73,.35);
+      border-radius: 6px; padding: 15px;
+      font-family: 'Courier New', monospace; font-size: 13px;
+      line-height: 1.75; white-space: pre-wrap; word-break: break-all;
+      color: var(--red); display: none;
+    }
+
+    .footer {
+      background: var(--bg-1); border-top: 1px solid var(--border);
+      padding: 9px 24px; font-size: 11px; color: var(--text-2);
+      display: flex; justify-content: space-between; flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">CC</div>
+  <span class="app-name">CyberCorp &mdash; Automation Script Portal</span>
+  <span class="vuln-badge">&#x26A0; Vulnerable Demo</span>
+</div>
+
+<div class="main">
+
+  <!-- Left: upload + script list -->
+  <div class="left-panel">
+
+    <div>
+      <div class="block-label">Upload Script</div>
+      <div class="drop-zone" id="dropZone">
+        <input type="file" id="fileInput" />
+        <div class="dz-icon">&#x1F4E4;</div>
+        <div class="dz-hint">
+          Drop a script here or <strong>click to browse</strong>
+        </div>
+        <div class="dz-selected" id="dzSelected"></div>
+      </div>
+      <button class="btn-upload" id="uploadBtn" onclick="uploadFile()">
+        <div class="spinner"></div>
+        <span id="uploadBtnText">Upload</span>
+      </button>
+      <div class="upload-status" id="uploadStatus"></div>
+      <div class="upload-path-note">
+        Files saved to: <span class="hl">/var/www/html/uploads/</span><br/>
+        Web path: <span class="hl">http://localhost:38082/uploads/&lt;file&gt;</span>
+      </div>
+    </div>
+
+    <div>
+      <div class="block-label">Scripts on Server</div>
+      <div class="script-list" id="scriptList">
+        <span class="placeholder">Loading&#x2026;</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Right: execution output -->
+  <div class="right-panel">
+
+    <div class="debug-header">
+      <div class="dot"></div>
+      Execution Output
+    </div>
+
+    <div>
+      <div class="block-label" style="margin-bottom:7px">Execution Metadata</div>
+      <div class="meta-box" id="metaBox">
+        <span class="placeholder">&mdash; run a script to see output &mdash;</span>
+      </div>
+    </div>
+
+    <div>
+      <div class="block-label" style="margin-bottom:7px">stdout</div>
+      <div class="output-box" id="stdoutBox">
+        <span class="placeholder">&mdash;</span>
+      </div>
+    </div>
+
+    <div id="stderrBlock">
+      <div class="block-label" style="margin-bottom:7px">stderr</div>
+      <div class="stderr-box" id="stderrBox"></div>
+    </div>
+
+  </div>
+</div>
+
+<div class="footer">
+  <span>CyberCorp Automation Portal v3.1.0 &mdash; Script Runner</span>
+  <span>webapp-vulns-demos &middot; file-upload POC</span>
+</div>
+
+<script>
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // ── File picker display ─────────────────────────────────────────
+  document.getElementById('fileInput').addEventListener('change', function() {
+    var sel = document.getElementById('dzSelected');
+    if (this.files.length) {
+      sel.textContent = this.files[0].name;
+      sel.style.display = 'block';
+    }
+  });
+
+  var dz = document.getElementById('dropZone');
+  dz.addEventListener('dragover',  function(e){ e.preventDefault(); dz.classList.add('drag-over'); });
+  dz.addEventListener('dragleave', function()  { dz.classList.remove('drag-over'); });
+  dz.addEventListener('drop',      function(e){
+    e.preventDefault(); dz.classList.remove('drag-over');
+    var dt = e.dataTransfer;
+    if (dt.files.length) {
+      document.getElementById('fileInput').files = dt.files;
+      document.getElementById('dzSelected').textContent = dt.files[0].name;
+      document.getElementById('dzSelected').style.display = 'block';
+    }
+  });
+
+  // ── Upload ──────────────────────────────────────────────────────
+  async function uploadFile() {
+    var input = document.getElementById('fileInput');
+    if (!input.files.length) return;
+
+    var btn     = document.getElementById('uploadBtn');
+    var btnText = document.getElementById('uploadBtnText');
+    var status  = document.getElementById('uploadStatus');
+    btn.classList.add('loading');
+    btnText.textContent = 'Uploading\u2026';
+    status.className = 'upload-status';
+
+    var form = new FormData();
+    form.append('file', input.files[0]);
+
+    try {
+      var res  = await fetch('/api/upload', { method: 'POST', body: form });
+      var data = await res.json();
+
+      if (data.success) {
+        status.className   = 'upload-status ok';
+        status.textContent = '\u2713 ' + data.message;
+        loadScriptList();
+      } else {
+        status.className   = 'upload-status err';
+        status.textContent = '\u2717 ' + (data.error || 'Upload failed.');
+      }
+    } catch (e) {
+      status.className   = 'upload-status err';
+      status.textContent = 'Connection error.';
+    } finally {
+      btn.classList.remove('loading');
+      btnText.textContent = 'Upload';
+    }
+  }
+
+  // ── Script list ─────────────────────────────────────────────────
+  async function loadScriptList() {
+    try {
+      var res  = await fetch('/api/list');
+      var data = await res.json();
+      var list = document.getElementById('scriptList');
+
+      if (data.files && data.files.length) {
+        list.innerHTML = data.files.map(function(f) {
+          var webUrl = '/uploads/' + encodeURIComponent(f);
+          return '<div class="script-item">'
+            + '<div class="script-item-top">'
+            + '<span class="sname">\uD83D\uDCC4 ' + escHtml(f) + '</span>'
+            + '<button class="btn-run" onclick="runScript(\'' + escHtml(f) + '\')">&#x25B6; Run</button>'
+            + '</div>'
+            + '<span class="web-path"><a href="' + webUrl + '" target="_blank">&#x1F310; ' + webUrl + ' &#x2197;</a></span>'
+            + '</div>';
+        }).join('');
+      } else {
+        list.innerHTML = '<span class="placeholder">No scripts uploaded yet.</span>';
+      }
+    } catch (e) {
+      document.getElementById('scriptList').innerHTML =
+        '<span class="placeholder" style="color:var(--red)">Could not reach backend.</span>';
+    }
+  }
+
+  // ── Execute ─────────────────────────────────────────────────────
+  async function runScript(filename) {
+    try {
+      var res  = await fetch('/api/execute?file=' + encodeURIComponent(filename));
+      var data = await res.json();
+
+      // Metadata
+      document.getElementById('metaBox').innerHTML = ''
+        + '<div class="kv"><span class="kv-key">file</span><span class="kv-value">' + escHtml(data.filename || filename) + '</span></div>'
+        + '<div class="kv"><span class="kv-key">returncode</span><span class="kv-value" style="color:' + (data.returncode === 0 ? 'var(--green)' : 'var(--red)') + '">' + (data.returncode !== undefined ? data.returncode : '—') + '</span></div>'
+        + (data.error ? '<div class="kv"><span class="kv-key" style="color:var(--red)">error</span><span class="kv-value" style="color:var(--red)">' + escHtml(data.error) + '</span></div>' : '');
+
+      // stdout
+      var stdoutBox = document.getElementById('stdoutBox');
+      stdoutBox.textContent = data.stdout || '(no output)';
+      stdoutBox.className   = 'output-box' + (data.stderr ? ' has-stderr' : '');
+
+      // stderr
+      var stderrBox   = document.getElementById('stderrBox');
+      var stderrBlock = document.getElementById('stderrBlock');
+      if (data.stderr) {
+        stderrBox.textContent  = data.stderr;
+        stderrBox.style.display = 'block';
+      } else {
+        stderrBox.style.display = 'none';
+      }
+
+    } catch (e) {
+      document.getElementById('metaBox').innerHTML =
+        '<span style="color:var(--red)">Connection error &mdash; is the backend container running?</span>';
+    }
+  }
+
+  loadScriptList();
+</script>
+</body>
+</html>

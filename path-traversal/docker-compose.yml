@@ -1,0 +1,21 @@
+services:
+
+  webapp-vulns-pathtrav-backend:
+    build: ./backend
+    container_name: webapp-vulns-pathtrav-backend
+    networks:
+      - webapp-vulns-pathtrav-network
+
+  webapp-vulns-pathtrav-frontend:
+    build: ./frontend
+    container_name: webapp-vulns-pathtrav-frontend
+    ports:
+      - "38081:80"
+    networks:
+      - webapp-vulns-pathtrav-network
+    depends_on:
+      - webapp-vulns-pathtrav-backend
+
+networks:
+  webapp-vulns-pathtrav-network:
+    name: webapp-vulns-pathtrav-network

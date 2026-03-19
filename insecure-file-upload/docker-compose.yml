@@ -1,0 +1,29 @@
+services:
+
+  webapp-vulns-insecure-file-upload-backend:
+    build: ./backend
+    container_name: webapp-vulns-insecure-file-upload-backend
+    volumes:
+      - webapp-vulns-insecure-file-upload-uploads:/app/uploads
+    networks:
+      - webapp-vulns-insecure-file-upload-network
+
+  webapp-vulns-insecure-file-upload-frontend:
+    build: ./frontend
+    container_name: webapp-vulns-insecure-file-upload-frontend
+    ports:
+      - "38082:80"
+    volumes:
+      - webapp-vulns-insecure-file-upload-uploads:/var/www/html/uploads
+    networks:
+      - webapp-vulns-insecure-file-upload-network
+    depends_on:
+      - webapp-vulns-insecure-file-upload-backend
+
+networks:
+  webapp-vulns-insecure-file-upload-network:
+    name: webapp-vulns-insecure-file-upload-network
+
+volumes:
+  webapp-vulns-insecure-file-upload-uploads:
+    name: webapp-vulns-insecure-file-upload-uploads

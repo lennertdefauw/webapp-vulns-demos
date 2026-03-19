@@ -18,7 +18,7 @@ if [[ -z "$SLUG" ]]; then
   echo ""
   echo "  Usage: ./cleanup.sh <slug|all>"
   echo ""
-  echo "  Running demo containers:"
+  echo "  Running demo containers (all webapp-vulns-*):"
   docker ps --filter "name=${GLOBAL_PREFIX}-" \
             --format "  {{.Names}}\t{{.Status}}" 2>/dev/null || true
   echo ""
