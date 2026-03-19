@@ -1,0 +1,45 @@
+services:
+
+  webapp-vulns-sqli-db:
+    build: ./database
+    container_name: webapp-vulns-sqli-db
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: vulnapp
+      MYSQL_USER: vulnuser
+      MYSQL_PASSWORD: vulnpassword
+    networks:
+      - webapp-vulns-sqli-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+
+  webapp-vulns-sqli-backend:
+    build: ./backend
+    container_name: webapp-vulns-sqli-backend
+    environment:
+      DB_HOST: webapp-vulns-sqli-db
+      DB_USER: vulnuser
+      DB_PASSWORD: vulnpassword
+      DB_NAME: vulnapp
+    networks:
+      - webapp-vulns-sqli-network
+    depends_on:
+      webapp-vulns-sqli-db:
+        condition: service_healthy
+
+  webapp-vulns-sqli-frontend:
+    build: ./frontend
+    container_name: webapp-vulns-sqli-frontend
+    ports:
+      - "38080:80"
+    networks:
+      - webapp-vulns-sqli-network
+    depends_on:
+      - webapp-vulns-sqli-backend
+
+networks:
+  webapp-vulns-sqli-network:
+    name: webapp-vulns-sqli-network
